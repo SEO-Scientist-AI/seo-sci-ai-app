@@ -4,6 +4,7 @@ import { getCurrentWebsite } from "@/app/actions/setWebsite";
 import { AnalyticsFilters } from "@/components/analytics/filters";
 import { PagesTable } from "@/components/analytics/pages-table";
 import { Sidebar } from "@/components/layout/sidebar";
+import { LogoutButton } from "@/components/auth/logout-button";
 
 export const runtime = "edge";
 
@@ -24,7 +25,10 @@ export default async function PagesPage() {
       <nav className="border-b">
         <div className="flex h-16 items-center px-4 justify-between">
           <div className="text-sm text-muted-foreground">{currentWebsite}</div>
-          <SetThemeButton />
+          <div className="flex items-center gap-2">
+            <SetThemeButton />
+            <LogoutButton />
+          </div>
         </div>
       </nav>
 

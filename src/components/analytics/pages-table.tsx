@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useAnalyticsFilters } from '@/store/analytics-filters';
-import { SearchAnalyticsPage } from '@/types/searchConsole';
-import { SortableHeader } from './sortable-header';
-import { filterAnalytics } from '@/app/actions/filterAnalytics';
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useAnalyticsFilters } from "@/store/analytics-filters";
+import { SearchAnalyticsPage } from "@/types/searchConsole";
+import { SortableHeader } from "./sortable-header";
+import { filterAnalytics } from "@/app/actions/filterAnalytics";
 
 interface PagesTableProps {
   initialPages: SearchAnalyticsPage[];
@@ -15,21 +15,37 @@ export function PagesTable({ initialPages }: PagesTableProps) {
   const { filters } = useAnalyticsFilters();
   const [pages, setPages] = useState(initialPages);
   const [loading, setLoading] = useState(false);
+  const [isInitialMount, setIsInitialMount] = useState(true);
 
   useEffect(() => {
+    // Skip the initial mount and fetch since we already have the data
+    if (isInitialMount) {
+      setIsInitialMount(false);
+      return;
+    }
+
+    // Skip if filters match initial data
+    if (
+      filters.limit === 100 &&
+      filters.sortBy === "position" &&
+      filters.sortOrder === "asc"
+    ) {
+      return;
+    }
+
     async function fetchPages() {
       setLoading(true);
       try {
         const newPages = await filterAnalytics(filters);
         setPages(newPages);
       } catch (error) {
-        console.error('Error fetching pages:', error);
+        console.error("Error fetching pages:", error);
       } finally {
         setLoading(false);
       }
     }
     fetchPages();
-  }, [filters]);
+  }, [filters, isInitialMount]);
 
   return (
     <div className="rounded-lg border w-full">
@@ -45,10 +61,8 @@ export function PagesTable({ initialPages }: PagesTableProps) {
               <col className="w-[100px]" />
             </colgroup>
             <thead>
-              <tr className="border-b divide-x divide-border">
-                <th className="py-2 px-4 text-left font-medium">
-                  <SortableHeader field="page">Page</SortableHeader>
-                </th>
+              <tr className="divide-x divide-border bg-muted/50">
+                <th className="py-2 px-4 text-left font-medium">Page</th>
                 <th className="py-2 px-4 text-left font-medium">
                   Content Score
                 </th>
@@ -59,7 +73,9 @@ export function PagesTable({ initialPages }: PagesTableProps) {
                   <SortableHeader field="traffic">Traffic</SortableHeader>
                 </th>
                 <th className="py-2 px-4 text-right font-medium">
-                  <SortableHeader field="impressions">Impr.</SortableHeader>
+                  <SortableHeader field="impressions">
+                    Impressions
+                  </SortableHeader>
                 </th>
                 <th className="py-2 px-4 text-right font-medium">
                   <SortableHeader field="ctr">CTR</SortableHeader>
@@ -78,7 +94,10 @@ export function PagesTable({ initialPages }: PagesTableProps) {
                         </>
                       ) : (
                         <>
-                          <Link href={page.page} className="text-blue-600 hover:underline truncate">
+                          <Link
+                            href={page.page}
+                            className="text-blue-600 hover:underline truncate"
+                          >
                             {page.page}
                           </Link>
                           <span className="text-xs text-muted-foreground truncate">
@@ -91,7 +110,9 @@ export function PagesTable({ initialPages }: PagesTableProps) {
                   <td className="py-2 px-4">
                     <div className="flex items-center gap-2">
                       <div className="h-3 w-3 animate-spin rounded-full border border-gray-300 border-t-gray-500" />
-                      <span className="text-muted-foreground">Analyzing...</span>
+                      <span className="text-muted-foreground">
+                        Analyzing...
+                      </span>
                     </div>
                   </td>
                   <td className="py-2 px-4 text-right">
@@ -130,4 +151,4 @@ export function PagesTable({ initialPages }: PagesTableProps) {
       </div>
     </div>
   );
-} 
+}
