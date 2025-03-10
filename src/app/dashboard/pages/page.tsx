@@ -1,7 +1,9 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { getThemeToggler } from "@/lib/theme/get-theme-button";
 import Link from "next/link";
-import { 
+import {
   Home,
   Globe,
   FileText,
@@ -22,12 +24,12 @@ export const runtime = "edge";
 export default async function PagesPage() {
   const SetThemeButton = getThemeToggler();
   const currentWebsite = await getCurrentWebsite();
-  
+
   // Get initial data
   const initialPages = await getSearchAnalytics({
     limit: 100,
-    sortBy: 'position',
-    sortOrder: 'asc'
+    sortBy: "position",
+    sortOrder: "asc",
   });
 
   const sidebarItems = [
@@ -106,4 +108,4 @@ export default async function PagesPage() {
       </div>
     </div>
   );
-} 
+}
