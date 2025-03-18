@@ -1,5 +1,6 @@
 import { auth } from "@/server/auth";
 import { redirect } from "next/navigation";
+import { getThemeToggler } from "@/lib/theme/get-theme-button"
 
 export default async function DashboardLayout({
   children,
@@ -12,5 +13,5 @@ export default async function DashboardLayout({
     redirect("/");
   }
 
-  return <>{children}</>;
+  return children;
 } 

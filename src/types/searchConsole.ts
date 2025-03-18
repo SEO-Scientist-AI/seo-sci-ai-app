@@ -1,12 +1,18 @@
-export type SearchAnalyticsPage = {
+export interface SearchAnalyticsPage {
   page: string;
   mainKeyword: string;
-  contentScore: string;
-  position: string;
-  traffic: string;
-  impressions: string;
-  ctr: string;
-};
+  position: number;
+  traffic: number;
+  impressions: number;
+  ctr: number;
+  clicks: number;
+  contentScore: number;
+  keywords?: string[];
+  _position: number;
+  _traffic: number;
+  _impressions: number;
+  _ctr: number;
+}
 
 export type SearchConsoleResponse = {
   rows: {
