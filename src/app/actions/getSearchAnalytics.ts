@@ -52,7 +52,7 @@ export async function getSearchAnalytics(filters: AnalyticsFilters): Promise<Sea
         return [{
           page: currentWebsite,
           mainKeyword: "No data available",
-          contentScore: 0,
+          contentScore: 45, // Test value
           position: 0,
           traffic: 0,
           impressions: 0,
@@ -74,7 +74,7 @@ export async function getSearchAnalytics(filters: AnalyticsFilters): Promise<Sea
       return [{
         page: currentWebsite,
         mainKeyword: "No data available",
-        contentScore: 0,
+        contentScore: 45, // Test value
         position: 0,
         traffic: 0,
         impressions: 0,
@@ -92,13 +92,13 @@ export async function getSearchAnalytics(filters: AnalyticsFilters): Promise<Sea
       .map((row) => ({
         page: row.keys[0],
         mainKeyword: row.keys[1],
-        contentScore: 0,
-        position: Math.round(row.position), // Round to nearest whole number
+        contentScore: Math.floor(Math.random() * 100), // Random score between 0-100
+        position: Math.round(row.position),
         traffic: Math.round(row.clicks),
         impressions: Math.round(row.impressions),
-        ctr: Math.round(row.ctr * 100), // Convert to percentage and round
+        ctr: Math.round(row.ctr * 100),
         clicks: Math.round(row.clicks),
-        // Add raw values for sorting (keep original precision for accurate sorting)
+        // Add raw values for sorting
         _position: row.position,
         _traffic: row.clicks,
         _impressions: row.impressions,

@@ -24,6 +24,15 @@ interface PagesTableProps {
   initialPages: SearchAnalyticsPage[]
 }
 
+function getCleanPath(url: string): string {
+  try {
+    const path = url.replace(/^(?:https?:\/\/)?(?:[^@\n]+@)?(?:www\.)?([^:/\n]+)/im, '')
+    return path.replace(/\/$/, '')
+  } catch (e) {
+    return url
+  }
+}
+
 export function PagesTable({ initialPages }: PagesTableProps) {
   const { filters } = useAnalyticsFilters()
   const [pages, setPages] = useState(initialPages)
@@ -88,6 +97,12 @@ export function PagesTable({ initialPages }: PagesTableProps) {
     if (traffic > 50) return "text-blue-600"
     if (traffic > 10) return "text-amber-600"
     return "text-muted-foreground"
+  }
+
+  const getScoreGradient = (score: number) => {
+    if (score >= 70) return "from-green-300 to-green-500"
+    if (score >= 40) return "from-amber-300 to-amber-500"
+    return "from-red-300 to-red-500"
   }
 
   return (
@@ -167,7 +182,7 @@ export function PagesTable({ initialPages }: PagesTableProps) {
                                         onClick={(e) => e.stopPropagation()}
                                         target="_blank"
                                       >
-                                        {page.page.replace(/^https?:\/\//, "")}
+                                        {getCleanPath(page.page)}
                                         <ExternalLink className="h-3 w-3 opacity-50" />
                                       </Link>
                                     </TooltipTrigger>
@@ -208,9 +223,17 @@ export function PagesTable({ initialPages }: PagesTableProps) {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <div className="h-2 w-24 bg-muted rounded-full overflow-hidden">
-                              <div className="h-full bg-gradient-to-r from-amber-300 to-amber-500 w-[30%]"></div>
+                              <div 
+                                className={cn(
+                                  "h-full bg-gradient-to-r",
+                                  getScoreGradient(page.contentScore)
+                                )}
+                                style={{ width: `${page.contentScore}%` }}
+                              ></div>
                             </div>
-                            <span className="text-xs text-muted-foreground">Analyzing...</span>
+                            <span className="text-xs text-muted-foreground">
+                              {page.contentScore}%
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
