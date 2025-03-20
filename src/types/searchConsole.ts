@@ -12,6 +12,10 @@ export interface SearchAnalyticsPage {
   _traffic: number;
   _impressions: number;
   _ctr: number;
+  positionTrend: number;
+  trafficTrend: number;
+  impressionsTrend: number;
+  ctrTrend: number;
 }
 
 export type SearchConsoleResponse = {

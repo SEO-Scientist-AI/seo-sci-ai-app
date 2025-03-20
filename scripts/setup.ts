@@ -253,7 +253,7 @@ async function promptForGoogleClientCredentials() {
 
     if (!fs.existsSync(devVarsPath)) {
         console.log(
-            "\x1b[33mNow, we will set up authentication for your app using Google OAuth2. \nGo to https://console.cloud.google.com/, create a new project and set up OAuth consent screen.\nThen, go to Credentials > OAuth client ID and create a new client ID.\nPaste the client ID and client secret below. \n\nMore info: https://developers.google.com/workspace/guides/configure-oauth-consent#:~:text=Go%20to%20OAuth%20consent%20screen,sensitive%20scopes%2C%20and%20restricted%20scopes.\x1b[0m",
+            "\x1b[33mNow, we will set up authentication for your app using Google OAuth2. \nGo to https://console.cloud.google.com/, create a new project and set up OAuth consent screen.\nThen:\n1. Go to Credentials > OAuth client ID and create a new client ID\n2. Enable the Search Console API and Indexing API in Google Cloud Console\n3. Add the required scopes (webmasters.readonly and indexing) to your OAuth consent screen\n\nPaste the client ID and client secret below.\x1b[0m",
         );
         const clientId = await prompt(
             "Enter your Google Client ID (enter to skip)",

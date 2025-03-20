@@ -5,6 +5,12 @@ type GSCProperty = {
   permissionLevel: string;
   clicks: string | number;
   impressions: string | number;
+  position: number;
+  ctr: number;
+  clicksTrend: number;
+  impressionsTrend: number;
+  positionTrend: number;
+  ctrTrend: number;
 }
 
 interface StatsResponse {
@@ -12,6 +18,7 @@ interface StatsResponse {
     clicks: number;
     impressions: number;
     ctr: number;
+    position?: number;
   }[];
 }
 
@@ -49,7 +56,18 @@ export async function getGSCProperties(): Promise<GSCProperty[]> {
     // Get analytics data for each site
     const propertiesWithStats = await Promise.all(
       data.siteEntry.map(async (site) => {
-        const statsResponse = await fetch(
+        // Current period (last 7 days)
+        const currentEndDate = new Date();
+        const currentStartDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        
+        // Previous period (7 days before the current period)
+        const previousEndDate = new Date(currentStartDate);
+        previousEndDate.setDate(previousEndDate.getDate() - 1);
+        const previousStartDate = new Date(previousEndDate);
+        previousStartDate.setDate(previousStartDate.getDate() - 7);
+
+        // Fetch current period stats
+        const currentStatsResponse = await fetch(
           `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(site.siteUrl)}/searchAnalytics/query`,
           {
             method: 'POST',
@@ -58,26 +76,80 @@ export async function getGSCProperties(): Promise<GSCProperty[]> {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-              endDate: new Date().toISOString().split('T')[0],
+              startDate: currentStartDate.toISOString().split('T')[0],
+              endDate: currentEndDate.toISOString().split('T')[0],
             })
           }
         );
 
-        const statsData = (await statsResponse.json()) as StatsResponse;
+        // Fetch previous period stats
+        const previousStatsResponse = await fetch(
+          `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(site.siteUrl)}/searchAnalytics/query`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              startDate: previousStartDate.toISOString().split('T')[0],
+              endDate: previousEndDate.toISOString().split('T')[0],
+            })
+          }
+        );
+
+        const currentStatsData = (await currentStatsResponse.json()) as StatsResponse;
+        const previousStatsData = (await previousStatsResponse.json()) as StatsResponse;
         
-        const clicks = statsData.rows?.[0]?.clicks 
-          ? Math.round(statsData.rows[0].clicks / 7) 
-          : '0';
-        const impressions = statsData.rows?.[0]?.impressions 
-          ? Math.round(statsData.rows[0].impressions / 7)
-          : '0';
+        // Calculate current metrics
+        const currentClicks = currentStatsData.rows?.[0]?.clicks 
+          ? Math.round(currentStatsData.rows[0].clicks / 7) 
+          : 0;
+        const currentImpressions = currentStatsData.rows?.[0]?.impressions 
+          ? Math.round(currentStatsData.rows[0].impressions / 7)
+          : 0;
+        const currentPosition = currentStatsData.rows?.[0]?.position ?? 0;
+        const currentCtr = currentStatsData.rows?.[0]?.ctr ?? 0;
+
+        // Calculate previous metrics
+        const previousClicks = previousStatsData.rows?.[0]?.clicks 
+          ? Math.round(previousStatsData.rows[0].clicks / 7) 
+          : 0;
+        const previousImpressions = previousStatsData.rows?.[0]?.impressions 
+          ? Math.round(previousStatsData.rows[0].impressions / 7)
+          : 0;
+        const previousPosition = previousStatsData.rows?.[0]?.position ?? 0;
+        const previousCtr = previousStatsData.rows?.[0]?.ctr ?? 0;
+
+        // Calculate trends (percentage change)
+        // For position, negative is good (moving up in rankings)
+        const clicksTrend = previousClicks === 0 
+          ? 0 
+          : Math.round(((currentClicks - previousClicks) / previousClicks) * 100);
+        
+        const impressionsTrend = previousImpressions === 0 
+          ? 0 
+          : Math.round(((currentImpressions - previousImpressions) / previousImpressions) * 100);
+        
+        const positionTrend = previousPosition === 0 
+          ? 0 
+          : Math.round(((previousPosition - currentPosition) / previousPosition) * 100);
+        
+        const ctrTrend = previousCtr === 0 
+          ? 0 
+          : Math.round(((currentCtr - previousCtr) / previousCtr) * 100);
 
         return {
           siteUrl: site.siteUrl,
           permissionLevel: site.permissionLevel,
-          clicks: clicks.toString(),
-          impressions: impressions.toString(),
+          clicks: currentClicks.toString(),
+          impressions: currentImpressions.toString(),
+          position: currentPosition,
+          ctr: Math.round(currentCtr * 100),
+          clicksTrend,
+          impressionsTrend,
+          positionTrend,
+          ctrTrend
         };
       })
     );

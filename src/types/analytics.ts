@@ -1,4 +1,11 @@
-export type SortField = 'page' | 'position' | 'traffic' | 'impressions' | 'ctr';
+export type SortField = 
+  | 'page'
+  | 'contentScore'
+  | 'position'
+  | 'traffic'
+  | 'impressions'
+  | 'ctr';
+
 export type SortOrder = 'asc' | 'desc';
 
 export type AnalyticsFilters = {
