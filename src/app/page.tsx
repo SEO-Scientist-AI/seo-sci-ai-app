@@ -5,124 +5,149 @@ import { db } from "@/server/db";
 import { users } from "@/server/db/schema";
 import { getThemeToggler } from "@/lib/theme/get-theme-button";
 import Link from "next/link";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Zap,
+  Search,
+  LineChart,
+  Brain,
+} from "lucide-react";
 
 export const runtime = "edge";
 
 export default async function Page() {
-	const session = await auth();
-	const SetThemeButton = getThemeToggler();
+  const session = await auth();
+  const SetThemeButton = getThemeToggler();
 
-	const userCount = await db
-		.select({
-			count: sql<number>`count(*)`.mapWith(Number),
-		})
-		.from(users);
+  const userCount = await db
+    .select({
+      count: sql<number>`count(*)`.mapWith(Number),
+    })
+    .from(users);
 
-	return (
-		<main className="flex flex-col min-h-screen">
-			{/* Header */}
-			<nav className="border-b">
-				<div className="flex h-16 items-center px-4 justify-between max-w-7xl mx-auto">
-					<div className="flex gap-2 items-center">
-						<svg
-							viewBox="0 0 256 116"
-							xmlns="http://www.w3.org/2000/svg"
-							width="45px"
-							height="45px"
-							preserveAspectRatio="xMidYMid"
-							role="img"
-							aria-label="Cloudflare logo"
-						>
-							<path
-								fill="#FFF"
-								d="m202.357 49.394-5.311-2.124C172.085 103.434 72.786 69.289 66.81 85.997c-.996 11.286 54.227 2.146 93.706 4.059 12.039.583 18.076 9.671 12.964 24.484l10.069.031c11.615-36.209 48.683-17.73 50.232-29.68-2.545-7.857-42.601 0-31.425-35.497Z"
-							/>
-							<path
-								fill="#F4811F"
-								d="M176.332 108.348c1.593-5.31 1.062-10.622-1.593-13.809-2.656-3.187-6.374-5.31-11.154-5.842L71.17 87.634c-.531 0-1.062-.53-1.593-.53-.531-.532-.531-1.063 0-1.594.531-1.062 1.062-1.594 2.124-1.594l92.946-1.062c11.154-.53 22.839-9.56 27.087-20.182l5.312-13.809c0-.532.531-1.063 0-1.594C191.203 20.182 166.772 0 138.091 0 111.535 0 88.697 16.995 80.73 40.896c-5.311-3.718-11.684-5.843-19.12-5.31-12.747 1.061-22.838 11.683-24.432 24.43-.531 3.187 0 6.374.532 9.56C16.996 70.107 0 87.103 0 108.348c0 2.124 0 3.718.531 5.842 0 1.063 1.062 1.594 1.594 1.594h170.489c1.062 0 2.125-.53 2.125-1.594l1.593-5.842Z"
-							/>
-							<path
-								fill="#FAAD3F"
-								d="M205.544 48.863h-2.656c-.531 0-1.062.53-1.593 1.062l-3.718 12.747c-1.593 5.31-1.062 10.623 1.594 13.809 2.655 3.187 6.373 5.31 11.153 5.843l19.652 1.062c.53 0 1.062.53 1.593.53.53.532.53 1.063 0 1.594-.531 1.063-1.062 1.594-2.125 1.594l-20.182 1.062c-11.154.53-22.838 9.56-27.087 20.182l-1.063 4.78c-.531.532 0 1.594 1.063 1.594h70.108c1.062 0 1.593-.531 1.593-1.593 1.062-4.25 2.124-9.03 2.124-13.81 0-27.618-22.838-50.456-50.456-50.456"
-							/>
-						</svg>
-						<span className="italic font-semibold">Cloudflare Next Saas Starter</span>
-					</div>
+  return (
+    <main className="flex flex-col min-h-screen">
+      {/* Header */}
+      <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm">
+        <div className="flex h-16 items-center px-4 justify-between max-w-7xl mx-auto">
+          <div className="flex gap-2 items-center">
+            <span className="font-semibold">SEO Scientist</span>
+          </div>
 
-					<div className="flex items-center gap-4">
-						<SetThemeButton />
-						{session?.user ? (
-							<div className="flex gap-4 items-center">
-								<Link href="/dashboard">
-									<Button variant="outline">Dashboard</Button>
-								</Link>
-								<form
-									action={async () => {
-										"use server";
-										await signOut();
-									}}
-								>
-									<Button variant="ghost">Sign out</Button>
-								</form>
-							</div>
-						) : (
-							<form
-								action={async () => {
-									"use server";
-									await signIn("google");
-								}}
-							>
-								<Button>Sign in</Button>
-							</form>
-						)}
-					</div>
-				</div>
-			</nav>
+          <div className="flex items-center gap-4">
+            <SetThemeButton />
+            {session?.user ? (
+              <div className="flex gap-4 items-center">
+                <Link href="/dashboard">
+                  <Button variant="outline">Dashboard</Button>
+                </Link>
+                <form
+                  action={async () => {
+                    "use server";
+                    await signOut();
+                  }}
+                >
+                  <Button variant="ghost">Sign out</Button>
+                </form>
+              </div>
+            ) : (
+              <form
+                action={async () => {
+                  "use server";
+                  await signIn("google");
+                }}
+              >
+                <Button>Sign in</Button>
+              </form>
+            )}
+          </div>
+        </div>
+      </nav>
 
-			{/* Main Content */}
-			<div className="flex-1 container mx-auto px-4 py-8">
-				<div className="max-w-2xl mx-auto">
-					<h1 className="text-4xl font-bold mb-8">
-						Welcome to Cloudflare Next Saas Starter
-					</h1>
-					<p className="mb-6">
-						Built a full stack app using production-ready tools and frameworks, host on
-						Cloudflare instantly.
-					</p>
-					<p className="mb-6">
-						An opinionated, batteries-included framework with{" "}
-						<a
-							className="text-transparent bg-clip-text bg-gradient-to-r from-[#a93d64] to-[#275ba9] font-semibold"
-							href="https://turbo.build"
-						>
-							Turborepo
-						</a>{" "}
-						and Nextjs. Fully Typesafe. Best practices followed by default.
-					</p>
+      {/* Hero Section */}
+      <section className="relative py-20 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 dark:from-blue-500/5 dark:to-purple-500/5" />
+        <div className="container relative px-4 mx-auto">
+          <div className="max-w-3xl mx-auto text-center">
+            <h1 className="text-5xl font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
+              AI-Powered SEO Optimization & A/B Testing
+            </h1>
+            <p className="text-xl text-muted-foreground mb-8">
+              Transform your website's performance with intelligent SEO
+              recommendations and data-driven A/B testing. Let AI guide your
+              optimization strategy.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <Link href="/dashboard">
+                <Button size="lg" className="gap-2">
+                  Start Optimizing <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+              <Link href="#features">
+                <Button variant="outline" size="lg">
+                  Learn More
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
 
-					<div className="prose dark:prose-invert">
-						<h2>Here's what the stack includes:</h2>
-						<ul className="list-disc mt-4">
-							<li>
-								Authentication with <code>next-auth</code>
-							</li>
-							<li>Database using Cloudflare's D1 serverless databases</li>
-							<li>Drizzle ORM, already connected to your database and auth ⚡</li>
-							<li>Light/darkmode theming that works with server components (!)</li>
-							<li>Styling using TailwindCSS and ShadcnUI</li>
-							<li>Turborepo with a landing page and shared components</li>
-							<li>Cloudflare wrangler for quick functions on the edge</li>
-							<li>... best part: everything's already set up for you. Just code!</li>
-						</ul>
-					</div>
+      {/* Features Section */}
+      <section id="features" className="py-20">
+        <div className="container px-4 mx-auto">
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="p-6 rounded-lg border bg-card">
+              <Brain className="w-12 h-12 text-blue-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">
+                AI-Powered Insights
+              </h3>
+              <p className="text-muted-foreground">
+                Get intelligent SEO recommendations based on advanced AI
+                analysis of your content and competitors.
+              </p>
+            </div>
+            <div className="p-6 rounded-lg border bg-card">
+              <LineChart className="w-12 h-12 text-green-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">A/B Testing</h3>
+              <p className="text-muted-foreground">
+                Test different versions of your content and track performance
+                with detailed analytics and insights.
+              </p>
+            </div>
+            <div className="p-6 rounded-lg border bg-card">
+              <Search className="w-12 h-12 text-purple-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">
+                Keyword Optimization
+              </h3>
+              <p className="text-muted-foreground">
+                Discover high-value keywords and optimize your content for
+                better search engine rankings.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-					<div className="mt-8 p-4 bg-muted rounded-lg">
-						<p className="text-sm text-muted-foreground">
-							Number of users in database: {userCount[0]!.count}
-						</p>
-					</div>
-				</div>
-			</div>
-		</main>
-	);
+      {/* Stats Section */}
+      <section className="py-20 bg-muted/50">
+        <div className="container px-4 mx-auto">
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-8">
+              Trusted by SEO Professionals
+            </h2>
+            <div className="p-6 rounded-lg border bg-card">
+              <p className="text-2xl font-bold text-primary">
+                {userCount[0]!.count} Active Users
+              </p>
+              <p className="text-muted-foreground mt-2">
+                Optimizing their websites with AI-powered insights
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
 }

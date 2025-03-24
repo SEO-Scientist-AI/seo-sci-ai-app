@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import "./prosemirror.css";
 import { ThemeScript } from "@/lib/theme/theme-script";
-import { SidebarProvider } from '@/store/sidebar-context';
+import { SidebarProvider } from "@/store/sidebar-context";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,12 +20,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <ThemeScript/>
+        <ThemeScript />
       </head>
       <body className={inter.className}>
-        <SidebarProvider>
-          {children}
-        </SidebarProvider>
+        <SidebarProvider>{children}</SidebarProvider>
       </body>
     </html>
   );

@@ -1,84 +1,102 @@
-import { Button } from "@/components/ui/button"
-import { getThemeToggler } from "@/lib/theme/get-theme-button"
-import { getCurrentWebsite } from "@/app/actions/setWebsite"
-import { DashboardSidebar } from "@/app/dashboard/_components/dashboard-sidebar"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { ExternalLink, Globe } from "lucide-react"
-import { auth } from "@/server/auth"
-import { DashboardLayout } from "@/app/dashboard/_components/dashboard-layout"
+import { Button } from "@/components/ui/button";
+import { getThemeToggler } from "@/lib/theme/get-theme-button";
+import { getCurrentWebsite } from "@/app/actions/setWebsite";
+import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { ExternalLink, Globe } from "lucide-react";
+import { auth } from "@/server/auth";
 
-export const runtime = "edge"
+export const runtime = "edge";
 
 export default async function SettingsPage() {
-  const currentWebsite = await getCurrentWebsite()
-  const session = await auth()
-  const userName = session?.user?.name || "User"
+  const currentWebsite = await getCurrentWebsite();
+  const session = await auth();
+  const userName = session?.user?.name || "User";
 
   return (
-    <DashboardLayout 
-      currentPath="/dashboard/settings"
-      currentWebsite={currentWebsite}
-      title="Settings"
-    >
-      <div className="px-8 py-6 w-full">
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-semibold">Settings</h1>
-            <p className="text-sm text-muted-foreground mt-1">Manage your business settings</p>
-          </div>
+    <div className="px-8 py-6 w-full">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold">Settings</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage your business settings
+          </p>
+        </div>
 
-          {/* Business Settings */}
-          <Card className="w-full dark:bg-background border-border/40">
-            <CardContent className="p-6 space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name" className="text-sm font-medium text-muted-foreground">Name</Label>
-                  <Input 
-                    id="name" 
-                    value={userName} 
-                    readOnly 
-                    className="mt-1.5 bg-muted/50 cursor-not-allowed border-border/40" 
-                  />
-                </div>
+        {/* Business Settings */}
+        <Card className="w-full dark:bg-background border-border/40">
+          <CardContent className="p-6 space-y-6">
+            <div className="space-y-4">
+              <div>
+                <Label
+                  htmlFor="name"
+                  className="text-sm font-medium text-muted-foreground"
+                >
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  value={userName}
+                  readOnly
+                  className="mt-1.5 bg-muted/50 cursor-not-allowed border-border/40"
+                />
+              </div>
 
-                <div>
-                  <Label htmlFor="website" className="text-sm font-medium text-muted-foreground">Website URL</Label>
-                  <div className="flex items-center mt-1.5">
-                    <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <Input 
-                      id="website" 
-                      value={`${currentWebsite}.com`} 
-                      readOnly 
-                      className="bg-muted/50 cursor-not-allowed border-border/40" 
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="niche" className="text-sm font-medium text-muted-foreground">Niche</Label>
-                  <Input 
-                    id="niche" 
-                    value="" 
-                    placeholder="No niche specified" 
-                    readOnly 
-                    className="mt-1.5 bg-muted/50 cursor-not-allowed border-border/40" 
+              <div>
+                <Label
+                  htmlFor="website"
+                  className="text-sm font-medium text-muted-foreground"
+                >
+                  Website URL
+                </Label>
+                <div className="flex items-center mt-1.5">
+                  <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <Input
+                    id="website"
+                    value={`${currentWebsite}.com`}
+                    readOnly
+                    className="bg-muted/50 cursor-not-allowed border-border/40"
                   />
                 </div>
               </div>
 
-              <div className="text-sm text-muted-foreground">
-                These settings are locked for this specific website. If you wish to change your niche or domain name, please contact support.
+              <div>
+                <Label
+                  htmlFor="niche"
+                  className="text-sm font-medium text-muted-foreground"
+                >
+                  Niche
+                </Label>
+                <Input
+                  id="niche"
+                  value=""
+                  placeholder="No niche specified"
+                  readOnly
+                  className="mt-1.5 bg-muted/50 cursor-not-allowed border-border/40"
+                />
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Content Settings */}
-          {/* <div className="space-y-3">
+            <div className="text-sm text-muted-foreground">
+              These settings are locked for this specific website. If you wish
+              to change your niche or domain name, please contact support.
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Content Settings */}
+        {/* <div className="space-y-3">
             <div>
               <h2 className="text-lg font-semibold">Content Settings</h2>
               <p className="text-sm text-muted-foreground">Configure how your content is generated</p>
@@ -150,8 +168,8 @@ export default async function SettingsPage() {
             </Card>
           </div> */}
 
-          {/* Call-to-Actions */}
-          {/* <div className="space-y-3">
+        {/* Call-to-Actions */}
+        {/* <div className="space-y-3">
             <div>
               <h2 className="text-lg font-semibold">Call-to-Actions</h2>
               <p className="text-sm text-muted-foreground">Add call-to-action that will be used as suggestions when generating content</p>
@@ -236,8 +254,7 @@ export default async function SettingsPage() {
               </CardContent>
             </Card>
           </div> */}
-        </div>
       </div>
-    </DashboardLayout>
-  )
-} 
+    </div>
+  );
+}
