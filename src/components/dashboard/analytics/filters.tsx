@@ -242,7 +242,7 @@ export function PagesTable({ initialPages }: PagesTableProps) {
   )
 }
 
-const limitOptions = [10, 25, 50, 100, 250, 500]
+const limitOptions = [10, 25, 50, 100]
 
 export function AnalyticsFilters() {
   const { filters, setLimit } = useAnalyticsFilters()

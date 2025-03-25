@@ -10,7 +10,7 @@ export const runtime = "edge";
 export default async function PagesPage() {
   const currentWebsite = await getCurrentWebsite();
   const initialPages = await getSearchAnalytics({
-    limit: 100,
+    limit: 25,
     sortBy: "position",
     sortOrder: "asc",
   });

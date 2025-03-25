@@ -109,7 +109,7 @@ const Editor = () => {
         <EditorContent
           initialContent={initialContent}
           extensions={extensions}
-          className="relative h-[calc(100vh-70px)] w-full max-w-screen-lg bg-background border-r border-gray-400/90 p-8"
+          className="relative h-[calc(100vh-70px)] w-full max-w-screen-lg bg-background border-gray-400/90 p-8"
           editorProps={{
             handleDOMEvents: {
               keydown: (_view, event) => handleCommandNavigation(event),

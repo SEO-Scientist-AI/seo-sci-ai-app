@@ -39,7 +39,7 @@ export default async function DashboardPage() {
           {properties.map((property, index) => (
             <Link
               key={index}
-              href={`/dashboard/page-audit?site=${encodeURIComponent(
+              href={`/page-audit?site=${encodeURIComponent(
                 property.siteUrl
               )}`}
               className="block group"
