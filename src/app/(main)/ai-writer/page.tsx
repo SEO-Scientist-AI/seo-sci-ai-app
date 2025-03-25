@@ -5,6 +5,8 @@ import Editor from "@/components/editor"
 import { RightSidebar } from "@/components/analytics-temp/ai-writer-right-sidebar"
 import { cn } from "@/lib/utils"
 
+export const runtime = 'edge';
+
 export default function AIWriter() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   
