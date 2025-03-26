@@ -9,6 +9,8 @@ node_modules
 .env.development
 .env.test
 
+bun.lockb
+
 .dev.vars
 .dev.vars.local
 .dev.vars.development
@@ -69,3 +71,4 @@ next-env.d.ts
 .DS_Store*
 Thumbs.db
 
+.qodo
