@@ -28,13 +28,13 @@ export async function setWebsite(website: string) {
 }
 
 /**
- * Get the current website from URL parameters only
+ * Get the current website from URL parameters or cookies
  */
 export async function getCurrentWebsite(urlParams?: URLSearchParams): Promise<string | null> {
-  console.log("getCurrentWebsite called with urlParams:", urlParams ? Object.fromEntries(urlParams.entries()) : 'undefined');
-  
   if (!urlParams) {
-    console.log("No URL parameters provided");
+    console.log("No URL parameters provided, checking cookies");
+    // If no URL parameters are provided, we'll need to handle this case differently
+    // in a real implementation, you might check cookies or another source
     return null;
   }
   

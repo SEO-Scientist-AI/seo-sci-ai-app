@@ -8,28 +8,15 @@ import { auth } from "@/server/auth";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { WebsiteSelector } from "../website-selector";
 import { Suspense } from "react";
+import { headers } from "next/headers";
 
 export async function DashboardLayout({
   children,
-  searchParams,
 }: {
   children: React.ReactNode;
-  searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const urlParams = new URLSearchParams();
-  
-  // Convert searchParams to URLSearchParams
-  if (searchParams) {
-    Object.entries(searchParams).forEach(([key, value]) => {
-      if (typeof value === 'string') {
-        urlParams.set(key, value);
-      } else if (Array.isArray(value)) {
-        value.forEach(v => urlParams.append(key, v));
-      }
-    });
-  }
-  
-  const currentWebsite = await getCurrentWebsite(urlParams);
+  // Call getCurrentWebsite with no parameters - it handles the null case
+  const currentWebsite = await getCurrentWebsite();
   
   // Get list of available websites from Google Search Console
   const availableWebsites = await getAvailableWebsites();
