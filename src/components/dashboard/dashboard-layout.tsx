@@ -1,19 +1,44 @@
-import { getThemeToggler } from "@/lib/theme/get-theme-button";
-import { LogoutButton } from "@/components/auth/logout-button";
 import Link from "next/link";
-import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-
-interface DashboardLayoutProps {
-  children: React.ReactNode;
-  currentWebsite?: string;
-  title?: string;
-}
+import { DashboardSidebar } from "./dashboard-sidebar";
+import { LogoutButton } from "../auth/logout-button";
+import { getThemeToggler } from "@/lib/theme/get-theme-button";
+import { getCurrentWebsite } from "@/app/actions/setWebsite";
+import { getAvailableWebsites } from "@/app/actions/getWebsites";
+import { auth } from "@/server/auth";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { WebsiteSelector } from "../website-selector";
+import { Suspense } from "react";
 
 export async function DashboardLayout({
   children,
-  currentWebsite,
-  title,
-}: DashboardLayoutProps) {
+  searchParams,
+}: {
+  children: React.ReactNode;
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
+  const urlParams = new URLSearchParams();
+  
+  // Convert searchParams to URLSearchParams
+  if (searchParams) {
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (typeof value === 'string') {
+        urlParams.set(key, value);
+      } else if (Array.isArray(value)) {
+        value.forEach(v => urlParams.append(key, v));
+      }
+    });
+  }
+  
+  const currentWebsite = await getCurrentWebsite(urlParams);
+  
+  // Get list of available websites from Google Search Console
+  const availableWebsites = await getAvailableWebsites();
+  
+  // Make sure current website is included in the list if it exists
+  if (currentWebsite && !availableWebsites.includes(currentWebsite)) {
+    availableWebsites.unshift(currentWebsite);
+  }
+  
   const SetThemeButton = getThemeToggler();
 
   return (
@@ -28,6 +53,14 @@ export async function DashboardLayout({
             SEO Scientist
           </Link>
           <div className="flex items-center gap-4">
+            {!currentWebsite ? (
+              <div className="text-xs bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-300 px-3 py-1.5 rounded-md flex items-center gap-1.5">
+                <AlertCircle className="h-3.5 w-3.5" />
+                <span>No website selected</span>
+              </div>
+            ) : (
+              <WebsiteSelector websites={availableWebsites} className="text-xs" />
+            )}
             <SetThemeButton />
             <LogoutButton />
           </div>
@@ -35,10 +68,18 @@ export async function DashboardLayout({
       </nav>
 
       <div className="flex">
-        <DashboardSidebar currentWebsite={currentWebsite} />
+        <DashboardSidebar currentWebsite={currentWebsite || undefined} />
 
-        {/* Main Content */}
-        <main className="flex-1">{children}</main>
+        {/* Main Content with Suspense for better loading experience */}
+        <main className="flex-1">
+          <Suspense fallback={
+            <div className="h-full w-full flex items-center justify-center min-h-[300px]">
+              <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
+            </div>
+          }>
+            {children}
+          </Suspense>
+        </main>
       </div>
     </div>
   );

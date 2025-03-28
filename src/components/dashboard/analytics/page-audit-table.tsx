@@ -6,9 +6,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAnalyticsFilters } from "@/store/analytics-filters";
 import type { SearchAnalyticsPage } from "@/types/searchConsole";
-import { SortableHeader } from "./sortable-header";
+import { SortableHeader } from "./page-audit-sortable-header";
 import { filterAnalytics } from "@/app/actions/filterAnalytics";
-import { PageDetailsSidebar } from "./page-details-sidebar";
+import { PageDetailsSidebar } from "./page-audit-sidebar";
 import {
   ExternalLink,
   PanelRightOpen,
@@ -229,6 +229,26 @@ export function PagesTable({ initialPages }: PagesTableProps) {
   // Modify the page URL/title display in the table row
   const renderPageTitle = (page: SearchAnalyticsPage) => {
     const titleState = pageTitles[page.page];
+    const isSpecialMessage = 
+      page.mainKeyword === "Property not found in Search Console" || 
+      page.mainKeyword === "No data in Search Console" ||
+      page.mainKeyword === "No permission for this property";
+
+    // Get badge text based on the message type
+    const getBadgeText = () => {
+      if (page.mainKeyword === "No permission for this property") {
+        return "No Access";
+      }
+      return "Not Verified";
+    };
+
+    // Get tooltip text based on the message type
+    const getTooltipText = () => {
+      if (page.mainKeyword === "No permission for this property") {
+        return "You don't have permission to access this property in Google Search Console";
+      }
+      return "This website needs to be verified in Google Search Console";
+    };
 
     if (titleState?.loading) {
       return (
@@ -242,18 +262,31 @@ export function PagesTable({ initialPages }: PagesTableProps) {
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Link
-              href={page.page}
-              className="text-primary hover:underline truncate inline-flex items-center gap-1 font-medium"
-              onClick={(e) => e.stopPropagation()}
-              target="_blank"
-            >
-              {titleState?.title || getCleanPath(page.page)}
-              <ExternalLink className="h-3 w-3 opacity-50" />
-            </Link>
+            {isSpecialMessage ? (
+              <div className="text-amber-600 hover:text-amber-700 truncate inline-flex items-center gap-1 font-medium">
+                {page.page.replace(/^https?:\/\//, "")}
+                <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                  {getBadgeText()}
+                </span>
+              </div>
+            ) : (
+              <Link
+                href={page.page}
+                className="text-primary hover:underline truncate inline-flex items-center gap-1 font-medium"
+                onClick={(e) => e.stopPropagation()}
+                target="_blank"
+              >
+                {titleState?.title || getCleanPath(page.page)}
+                <ExternalLink className="h-3 w-3 opacity-50" />
+              </Link>
+            )}
           </TooltipTrigger>
           <TooltipContent>
-            <p>Open page in new tab</p>
+            {isSpecialMessage ? (
+              <p>{getTooltipText()}</p>
+            ) : (
+              <p>Open page in new tab</p>
+            )}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -410,128 +443,159 @@ export function PagesTable({ initialPages }: PagesTableProps) {
                 </TableBody>
               ) : (
                 <TableBody>
-                  {pages.map((page, i) => (
-                    <TableRow
-                      key={i}
-                      className={cn(
-                        "group cursor-pointer transition-colors h-14",
-                        selectedPage?.page === page.page && "bg-muted/50"
-                      )}
-                      onClick={() => setSelectedPage(page)}
-                    >
-                      <TableCell className="py-3">
-                        <div className="flex items-center h-full">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <div className="flex-1 truncate">
-                                {renderPageTitle(page)}
+                  {pages.map((page, i) => {
+                    const isSpecialMessage = 
+                      page.mainKeyword === "Property not found in Search Console" || 
+                      page.mainKeyword === "No data in Search Console" ||
+                      page.mainKeyword === "No permission for this property";
+                    
+                    // Get explanation text to show under the domain
+                    const getSpecialMessageText = () => {
+                      if (page.mainKeyword === "No permission for this property") {
+                        return (
+                          <span className="text-amber-600">
+                            You don't have permission to access this domain in Google Search Console
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="text-amber-600">
+                          Verify this website in Google Search Console to see data
+                        </span>
+                      );
+                    };
+                    
+                    return (
+                      <TableRow
+                        key={i}
+                        className={cn(
+                          "group cursor-pointer transition-colors h-14",
+                          selectedPage?.page === page.page && "bg-muted/50"
+                        )}
+                        onClick={() => setSelectedPage(page)}
+                      >
+                        <TableCell className="py-3">
+                          <div className="flex items-center h-full">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <div className="flex-1 truncate">
+                                  {renderPageTitle(page)}
+                                </div>
                               </div>
+                              <span className="text-xs text-muted-foreground truncate">
+                                {page.mainKeyword === "Property not found in Search Console" || 
+                                 page.mainKeyword === "No data in Search Console" ||
+                                 page.mainKeyword === "No permission for this property" ? (
+                                  getSpecialMessageText()
+                                ) : (
+                                  page.mainKeyword
+                                )}
+                              </span>
                             </div>
-                            <span className="text-xs text-muted-foreground truncate">
-                              {page.mainKeyword}
+                            <div className="flex items-center gap-1 ml-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Add timestamp to force fresh data scrape
+                                  const timestamp = Date.now();
+                                  window.open(
+                                    `/ai-writer?url=${encodeURIComponent(
+                                      page.page
+                                    )}&refresh=${timestamp}`,
+                                    "_blank"
+                                  );
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                                <span className="sr-only">Edit with AI</span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPage(page);
+                                }}
+                              >
+                                <Sidebar className="h-4 w-4" />
+                                <span className="sr-only">View details</span>
+                              </Button>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className={cellDividerClass}>
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-0.5 w-24">
+                              {getScoreSegments(page.contentScore).map(
+                                (segment, index) => (
+                                  <div
+                                    key={index}
+                                    className={cn(
+                                      "h-1.5 flex-1 rounded-sm",
+                                      segment.active
+                                        ? segment.className
+                                        : "bg-gray-100 dark:bg-gray-800"
+                                    )}
+                                  />
+                                )
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {page.contentScore}%
                             </span>
                           </div>
-                          <div className="flex items-center gap-1 ml-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(
-                                  `/editor?url=${encodeURIComponent(
-                                    page.page
-                                  )}`,
-                                  "_blank"
-                                );
-                              }}
+                        </TableCell>
+                        <TableCell className={cn("text-right", cellDividerClass)}>
+                          <div className="flex items-center justify-end gap-2">
+                            <TrendIndicator
+                              trend={page.positionTrend}
+                              isPosition={true}
+                            />
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "font-medium",
+                                getPositionColor(page.position)
+                              )}
                             >
-                              <Pencil className="h-4 w-4" />
-                              <span className="sr-only">Edit with AI</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedPage(page);
-                              }}
+                              {page.position}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell className={cn("text-right", cellDividerClass)}>
+                          <div className="flex items-center justify-end gap-1">
+                            <TrendIndicator trend={page.trafficTrend} />
+                            <span
+                              className={cn(
+                                "font-medium",
+                                getTrafficTrend(page.traffic)
+                              )}
                             >
-                              <Sidebar className="h-4 w-4" />
-                              <span className="sr-only">View details</span>
-                            </Button>
+                              {formatNumber(page.traffic)}
+                            </span>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className={cellDividerClass}>
-                        <div className="flex items-center gap-2">
-                          <div className="flex gap-0.5 w-24">
-                            {getScoreSegments(page.contentScore).map(
-                              (segment, index) => (
-                                <div
-                                  key={index}
-                                  className={cn(
-                                    "h-1.5 flex-1 rounded-sm",
-                                    segment.active
-                                      ? segment.className
-                                      : "bg-gray-100 dark:bg-gray-800"
-                                  )}
-                                />
-                              )
-                            )}
+                        </TableCell>
+                        <TableCell className={cn("text-right", cellDividerClass)}>
+                          <div className="flex items-center justify-end gap-1">
+                            <TrendIndicator trend={page.impressionsTrend} />
+                            <span className="font-medium">
+                              {formatNumber(page.impressions)}
+                            </span>
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {page.contentScore}%
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className={cn("text-right", cellDividerClass)}>
-                        <div className="flex items-center justify-end gap-2">
-                          <TrendIndicator
-                            trend={page.positionTrend}
-                            isPosition={true}
-                          />
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "font-medium",
-                              getPositionColor(page.position)
-                            )}
-                          >
-                            {page.position}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell className={cn("text-right", cellDividerClass)}>
-                        <div className="flex items-center justify-end gap-1">
-                          <TrendIndicator trend={page.trafficTrend} />
-                          <span
-                            className={cn(
-                              "font-medium",
-                              getTrafficTrend(page.traffic)
-                            )}
-                          >
-                            {formatNumber(page.traffic)}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className={cn("text-right", cellDividerClass)}>
-                        <div className="flex items-center justify-end gap-1">
-                          <TrendIndicator trend={page.impressionsTrend} />
-                          <span className="font-medium">
-                            {formatNumber(page.impressions)}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className={cn("text-right", cellDividerClass)}>
-                        <div className="flex items-center justify-end gap-1">
-                          <TrendIndicator trend={page.ctrTrend} />
-                          <span className="font-medium">{page.ctr}%</span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell className={cn("text-right", cellDividerClass)}>
+                          <div className="flex items-center justify-end gap-1">
+                            <TrendIndicator trend={page.ctrTrend} />
+                            <span className="font-medium">{page.ctr}%</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               )}
             </Table>

@@ -12,21 +12,46 @@ export type IndexingStatus = {
 interface InspectionResponse {
   inspectionResult?: {
     indexStatusResult?: {
+      coverageState?: string;
       isIndexed?: boolean;
       lastCrawlTime?: string;
+      pageFetchState?: string;
+      robotsTxtState?: string;
+      indexingState?: string;
+      verdict?: string;
     };
   };
 }
 
-export async function checkIndexingStatus(url: string): Promise<IndexingStatus> {
+export async function checkIndexingStatus(
+  url: string,
+  urlParams?: URLSearchParams
+): Promise<IndexingStatus> {
+  const searchUrl = url.includes('http') ? url : `https://${url}`;
+  
   try {
     const session = await auth();
-    const currentWebsite = await getCurrentWebsite();
+    const currentWebsite = await getCurrentWebsite(urlParams);
     
     if (!session?.user || !session.accessToken) {
       throw new Error("Unauthorized");
     }
+    
+    // Check if no website is selected
+    if (!currentWebsite) {
+      return {
+        status: 'ERROR',
+        message: 'No website selected. Please select a website to check indexing status.'
+      };
+    }
 
+    // Format for Google Search Console API
+    const apiSiteUrl = currentWebsite.startsWith('sc-domain:')
+      ? currentWebsite
+      : `sc-domain:${currentWebsite}`;
+
+    console.log(`Checking indexing status for ${searchUrl} in property ${apiSiteUrl}`);
+    
     const response = await fetch(
       'https://searchconsole.googleapis.com/v1/urlInspection/index:inspect',
       {
@@ -36,8 +61,8 @@ export async function checkIndexingStatus(url: string): Promise<IndexingStatus> 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          inspectionUrl: url,
-          siteUrl: `sc-domain:${currentWebsite}`
+          inspectionUrl: searchUrl,
+          siteUrl: apiSiteUrl
         })
       }
     );
@@ -48,12 +73,54 @@ export async function checkIndexingStatus(url: string): Promise<IndexingStatus> 
     }
 
     const data = await response.json() as InspectionResponse;
+    console.log('Inspection results:', JSON.stringify(data, null, 2));
     
-    if (data.inspectionResult?.indexStatusResult?.isIndexed) {
+    // First check if the indexed field is true
+    if (data.inspectionResult?.indexStatusResult?.isIndexed === true) {
       return {
         status: 'INDEXED',
         lastCrawled: data.inspectionResult?.indexStatusResult?.lastCrawlTime,
         message: 'This page is indexed by Google'
+      };
+    }
+    
+    // Check for verdict "PASS" which means the URL is valid and indexed
+    if (data.inspectionResult?.indexStatusResult?.verdict === 'PASS') {
+      return {
+        status: 'INDEXED',
+        lastCrawled: data.inspectionResult?.indexStatusResult?.lastCrawlTime,
+        message: 'This page is indexed by Google'
+      };
+    }
+    
+    // Check coverage state for signs of indexing
+    const coverageState = data.inspectionResult?.indexStatusResult?.coverageState;
+    if (coverageState === 'Submitted and indexed' || 
+        coverageState === 'Indexed, not submitted' || 
+        coverageState === 'Indexed') {
+      return {
+        status: 'INDEXED',
+        lastCrawled: data.inspectionResult?.indexStatusResult?.lastCrawlTime,
+        message: 'This page is indexed by Google'
+      };
+    }
+    
+    // Check indexing state
+    const indexingState = data.inspectionResult?.indexStatusResult?.indexingState;
+    if (indexingState === 'INDEXING_ALLOWED' || indexingState === 'INDEXED') {
+      return {
+        status: 'INDEXED',
+        lastCrawled: data.inspectionResult?.indexStatusResult?.lastCrawlTime,
+        message: 'This page is indexed by Google'
+      };
+    }
+
+    // If we have lastCrawlTime but none of the above indexed states, it might still be indexed
+    if (data.inspectionResult?.indexStatusResult?.lastCrawlTime) {
+      return {
+        status: 'INDEXED',
+        lastCrawled: data.inspectionResult?.indexStatusResult?.lastCrawlTime,
+        message: 'This page appears to be indexed by Google'
       };
     }
 

@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 // import { TrendChart } from "@/components/trend-chart";
 import { TrendChart } from "@/components/trend-chart2";
 
+export const runtime = 'edge';
 
 interface KeywordData {
   keyword: string

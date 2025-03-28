@@ -57,7 +57,7 @@ export function DashboardSidebar({ currentWebsite }: SidebarProps) {
   const sidebarItems: SidebarItem[] = [
     {
       icon: Home,
-      label: currentWebsite || "Dashboard",
+      label: currentWebsite ? currentWebsite : "Dashboard",
       href: "/dashboard",
     },
     {
@@ -187,7 +187,7 @@ export function DashboardSidebar({ currentWebsite }: SidebarProps) {
             )}
             asChild
           >
-            <Link href="/dashboard/settings" className="flex items-center">
+            <Link href="/settings" className="flex items-center">
               <Settings
                 className={cn(
                   "h-5 w-5 min-w-5",

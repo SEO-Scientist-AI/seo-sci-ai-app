@@ -1,7 +1,7 @@
 "use client"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { X, RefreshCw, Loader2, CheckCircle2, AlertCircle, Search } from "lucide-react"
+import { X, RefreshCw, Loader2, CheckCircle2, AlertCircle, Search, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { CircularProgress } from "@/components/dashboard/circular-score"
+import { CONTENT_STRUCTURE_UPDATE_EVENT, ContentStructureMetrics } from "@/components/editor"
 
 interface SearchAnalyticsPage {
   page: string
@@ -106,18 +107,96 @@ const dummyPage: SearchAnalyticsPage = {
   position: 4.2,
   contentScore: 82,
   keywords: ["content marketing", "SEO", "optimization", "content strategy", "marketing metrics"],
-  wordCount: 2267,
-  headingCount: 34,
-  paragraphCount: 65,
-  imageCount: 5,
+  wordCount: 0,
+  headingCount: 0,
+  paragraphCount: 0,
+  imageCount: 0,
 }
 
 export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSidebarProps) {
   // Use dummy data if no page is provided
   const page = propPage || dummyPage
+  
+  // Add state for content metrics - initialize with zeros instead of hardcoded values
+  const [contentMetrics, setContentMetrics] = useState<ContentStructureMetrics>({
+    wordCount: 0,
+    headingCount: 0,
+    paragraphCount: 0,
+    imageCount: 0
+  })
 
   const { getPageState, updatePageStatus, setPageIndexing } = useSidebar()
   const pageState = page ? getPageState(page.page) : undefined
+  
+  // Load initial metrics from stored content if available
+  useEffect(() => {
+    // Attempt to calculate initial metrics from stored content
+    const storedContent = window.localStorage.getItem("novel-content");
+    const storedMarkdown = window.localStorage.getItem("markdown");
+    
+    if (storedContent) {
+      try {
+        // Get word count from markdown
+        const wordCount = storedMarkdown ? 
+          storedMarkdown.split(/\s+/).filter(Boolean).length : 0;
+        
+        // Parse content JSON
+        const json = JSON.parse(storedContent);
+        let headingCount = 0;
+        let paragraphCount = 0;
+        let imageCount = 0;
+        
+        // Count nodes recursively
+        const countNodes = (nodes: any[]) => {
+          if (!nodes) return;
+          for (const node of nodes) {
+            if (node.type === 'heading') headingCount++;
+            if (node.type === 'paragraph') paragraphCount++;
+            if (node.type === 'image') imageCount++;
+            if (node.content) countNodes(node.content);
+          }
+        };
+        
+        if (json.content) countNodes(json.content);
+        
+        // Update metrics with the calculated values
+        setContentMetrics({
+          wordCount: wordCount,
+          headingCount: headingCount,
+          paragraphCount: paragraphCount,
+          imageCount: imageCount
+        });
+        
+        console.log("Loaded initial content metrics:", {
+          wordCount, headingCount, paragraphCount, imageCount
+        });
+      } catch (e) {
+        console.error("Failed to calculate initial metrics:", e);
+      }
+    }
+  }, []);
+  
+  // Listen for content structure updates
+  useEffect(() => {
+    const handleContentStructureUpdate = (event: CustomEvent<ContentStructureMetrics>) => {
+      console.log("Content structure updated:", event.detail);
+      setContentMetrics(event.detail);
+    }
+    
+    // Add event listener
+    document.addEventListener(
+      CONTENT_STRUCTURE_UPDATE_EVENT, 
+      handleContentStructureUpdate as EventListener
+    )
+    
+    // Clean up
+    return () => {
+      document.removeEventListener(
+        CONTENT_STRUCTURE_UPDATE_EVENT, 
+        handleContentStructureUpdate as EventListener
+      )
+    }
+  }, [])
 
   const checkIndexStatus = async () => {
     if (!page?.page) return
@@ -243,26 +322,69 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 px-2">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M10 9l-6 6 6 6" />
-                            <path d="M14 9l6 6-6 6" />
-                          </svg>
-                          <span className="ml-1">Adjust</span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 px-2"
+                          onClick={() => {
+                            // Manually trigger a content analysis of what's currently in the editor
+                            const content = window.localStorage.getItem("novel-content");
+                            const markdown = window.localStorage.getItem("markdown");
+                            
+                            if (!content || !markdown) {
+                              toast.error("No content to analyze");
+                              return;
+                            }
+                            
+                            try {
+                              // Get accurate word count from markdown
+                              const wordCount = markdown.split(/\s+/).filter(Boolean).length;
+                              
+                              // Parse the editor's content JSON
+                              const json = JSON.parse(content);
+                              let headingCount = 0;
+                              let paragraphCount = 0;
+                              let imageCount = 0;
+                              
+                              // Recursive function to count content elements
+                              const countNodes = (nodes: any[]) => {
+                                if (!nodes) return;
+                                for (const node of nodes) {
+                                  if (node.type === 'heading') headingCount++;
+                                  if (node.type === 'paragraph') paragraphCount++;
+                                  if (node.type === 'image') imageCount++;
+                                  if (node.content) countNodes(node.content);
+                                }
+                              };
+                              
+                              if (json.content) countNodes(json.content);
+                              
+                              // Update metrics with real values
+                              const updatedMetrics = {
+                                wordCount,
+                                headingCount,
+                                paragraphCount,
+                                imageCount
+                              };
+                              
+                              setContentMetrics(updatedMetrics);
+                              
+                              // Log the metrics for debugging
+                              console.log("Refreshed content structure metrics:", updatedMetrics);
+                              
+                              toast.success("Content structure metrics refreshed");
+                            } catch (error) {
+                              console.error("Failed to refresh content metrics:", error);
+                              toast.error("Failed to refresh content metrics");
+                            }
+                          }}
+                        >
+                          <RefreshCw className="h-4 w-4 mr-1" />
+                          <span>Refresh</span>
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Adjust content structure</p>
+                        <p>Refresh content structure metrics</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -272,7 +394,7 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
                   <div className="px-2 py-3 text-center">
                     <div className="text-xs text-muted-foreground">WORDS</div>
                     <div className="flex items-center justify-center gap-1 mt-1">
-                      <span className="text-xl font-semibold">{page.wordCount || 2267}</span>
+                      <span className="text-xl font-semibold">{contentMetrics.wordCount}</span>
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="14"
@@ -283,10 +405,16 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
                         strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        className="text-red-500"
+                        className={contentMetrics.wordCount >= 3043 ? "text-green-500" : "text-red-500"}
                       >
-                        <path d="M12 19V5" />
-                        <path d="M5 12l7-7 7 7" />
+                        {contentMetrics.wordCount >= 3043 ? (
+                          <path d="M20 6L9 17l-5-5" />
+                        ) : (
+                          <>
+                            <path d="M12 19V5" />
+                            <path d="M5 12l7-7 7 7" />
+                          </>
+                        )}
                       </svg>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">3,043-3,499</div>
@@ -295,7 +423,7 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
                   <div className="px-2 py-3 text-center">
                     <div className="text-xs text-muted-foreground">HEADINGS</div>
                     <div className="flex items-center justify-center gap-1 mt-1">
-                      <span className="text-xl font-semibold">{page.headingCount || 34}</span>
+                      <span className="text-xl font-semibold">{contentMetrics.headingCount}</span>
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="14"
@@ -306,9 +434,16 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
                         strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        className="text-green-500"
+                        className={contentMetrics.headingCount >= 27 && contentMetrics.headingCount <= 40 ? "text-green-500" : "text-red-500"}
                       >
-                        <path d="M20 6L9 17l-5-5" />
+                        {contentMetrics.headingCount >= 27 && contentMetrics.headingCount <= 40 ? (
+                          <path d="M20 6L9 17l-5-5" />
+                        ) : (
+                          <>
+                            <path d="M12 19V5" />
+                            <path d="M5 12l7-7 7 7" />
+                          </>
+                        )}
                       </svg>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">27-40</div>
@@ -317,7 +452,7 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
                   <div className="px-2 py-3 text-center">
                     <div className="text-xs text-muted-foreground">PARAGRAPHS</div>
                     <div className="flex items-center justify-center gap-1 mt-1">
-                      <span className="text-xl font-semibold">{page.paragraphCount || 65}</span>
+                      <span className="text-xl font-semibold">{contentMetrics.paragraphCount}</span>
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="14"
@@ -328,10 +463,16 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
                         strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        className="text-red-500"
+                        className={contentMetrics.paragraphCount >= 85 ? "text-green-500" : "text-red-500"}
                       >
-                        <path d="M12 19V5" />
-                        <path d="M5 12l7-7 7 7" />
+                        {contentMetrics.paragraphCount >= 85 ? (
+                          <path d="M20 6L9 17l-5-5" />
+                        ) : (
+                          <>
+                            <path d="M12 19V5" />
+                            <path d="M5 12l7-7 7 7" />
+                          </>
+                        )}
                       </svg>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">at least 85</div>
@@ -340,7 +481,7 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
                   <div className="px-2 py-3 text-center">
                     <div className="text-xs text-muted-foreground">IMAGES</div>
                     <div className="flex items-center justify-center gap-1 mt-1">
-                      <span className="text-xl font-semibold">{page.imageCount || 5}</span>
+                      <span className="text-xl font-semibold">{contentMetrics.imageCount}</span>
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="14"
@@ -351,10 +492,16 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
                         strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        className="text-red-500"
+                        className={contentMetrics.imageCount >= 12 ? "text-green-500" : "text-red-500"}
                       >
-                        <path d="M12 19V5" />
-                        <path d="M5 12l7-7 7 7" />
+                        {contentMetrics.imageCount >= 12 ? (
+                          <path d="M20 6L9 17l-5-5" />
+                        ) : (
+                          <>
+                            <path d="M12 19V5" />
+                            <path d="M5 12l7-7 7 7" />
+                          </>
+                        )}
                       </svg>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">12-20</div>

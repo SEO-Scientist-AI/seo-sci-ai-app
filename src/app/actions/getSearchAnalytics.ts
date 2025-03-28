@@ -21,10 +21,40 @@ interface KeywordData {
   ctr: number;
 }
 
-export async function getSearchAnalytics(filters: AnalyticsFilters): Promise<SearchAnalyticsPage[]> {
+export async function getSearchAnalytics(
+  filters: AnalyticsFilters,
+  urlParams?: URLSearchParams
+): Promise<SearchAnalyticsPage[]> {
   try {
     const session = await auth();
-    const currentWebsite = await getCurrentWebsite();
+    const websiteFromParams = await getCurrentWebsite(urlParams);
+    
+    // Check if no website is selected
+    if (!websiteFromParams) {
+      console.log('No website selected - returning prompt message');
+      return [{
+        page: 'https://example.com/',
+        mainKeyword: "No website selected",
+        contentScore: 0,
+        position: 0,
+        traffic: 0,
+        impressions: 0,
+        ctr: 0,
+        clicks: 0,
+        positionTrend: 0,
+        trafficTrend: 0,
+        impressionsTrend: 0,
+        ctrTrend: 0,
+        _position: 0,
+        _traffic: 0,
+        _impressions: 0,
+        _ctr: 0
+      }];
+    }
+    
+    // At this point, websiteFromParams is guaranteed to be a string
+    const currentWebsite = websiteFromParams;
+    console.log(`Fetching data for website: ${currentWebsite}`);
     
     if (!session?.user || !session.accessToken) throw new Error("Unauthorized");
 
@@ -39,12 +69,15 @@ export async function getSearchAnalytics(filters: AnalyticsFilters): Promise<Sea
     const previousStartDate = new Date(previousEndDate);
     previousStartDate.setDate(previousStartDate.getDate() - 7);
 
-    // First try with sc-domain
-    const siteUrl = `sc-domain:${currentWebsite}`;
+    // Format for Google Search Console API (don't modify the URL parameter)
+    const apiSiteUrl = (currentWebsite as string).startsWith('sc-domain:') 
+      ? currentWebsite 
+      : `sc-domain:${currentWebsite}`;
+    console.log(`Using API site URL: ${apiSiteUrl}`);
     
     // Fetch current period data
     const currentResponse = await fetch(
-      `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
+      `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(apiSiteUrl)}/searchAnalytics/query`,
       {
         method: 'POST',
         headers: {
@@ -61,9 +94,91 @@ export async function getSearchAnalytics(filters: AnalyticsFilters): Promise<Sea
       }
     );
 
-    // Fetch previous period data
+    // Check if the response is not OK - could be because the property doesn't exist
+    if (!currentResponse.ok) {
+      const errorData = await currentResponse.json() as { error?: { message: string; code?: number } };
+      console.error(`API Error (${currentResponse.status}):`, errorData);
+      
+      // If this is a 404 error - the property likely doesn't exist
+      if (currentResponse.status === 404) {
+        return [{
+          page: `https://${currentWebsite}`,
+          mainKeyword: "Property not found in Search Console",
+          contentScore: 0,
+          position: 0,
+          traffic: 0,
+          impressions: 0,
+          ctr: 0,
+          clicks: 0,
+          positionTrend: 0,
+          trafficTrend: 0,
+          impressionsTrend: 0,
+          ctrTrend: 0,
+          _position: 0,
+          _traffic: 0,
+          _impressions: 0,
+          _ctr: 0
+        }];
+      }
+      
+      // If this is a 403 error - permission issue
+      if (currentResponse.status === 403) {
+        return [{
+          page: `https://${currentWebsite}`,
+          mainKeyword: "No permission for this property",
+          contentScore: 0,
+          position: 0,
+          traffic: 0,
+          impressions: 0,
+          ctr: 0,
+          clicks: 0,
+          positionTrend: 0,
+          trafficTrend: 0,
+          impressionsTrend: 0,
+          ctrTrend: 0,
+          _position: 0,
+          _traffic: 0,
+          _impressions: 0,
+          _ctr: 0
+        }];
+      }
+      
+      throw new Error(`Google Search Console API error: ${errorData.error?.message || 'Unknown error'}`);
+    }
+
+    // Try to parse the current data
+    const currentData = await currentResponse.json() as GSCResponse;
+    console.log(`Received data for ${currentWebsite}:`, 
+      currentData.rows ? `${currentData.rows.length} rows` : 'No rows');
+
+    // If no data available, try to provide a meaningful response
+    if (!currentData.rows || currentData.rows.length === 0) {
+      console.log(`No data found for ${currentWebsite} - returning placeholder`);
+      
+      // Create a more informative placeholder with the actual domain
+      return [{
+        page: `https://${currentWebsite}/`,
+        mainKeyword: "No data in Search Console",
+        contentScore: 0,
+        position: 0,
+        traffic: 0,
+        impressions: 0,
+        ctr: 0,
+        clicks: 0,
+        positionTrend: 0, 
+        trafficTrend: 0,
+        impressionsTrend: 0,
+        ctrTrend: 0,
+        _position: 0,
+        _traffic: 0,
+        _impressions: 0,
+        _ctr: 0
+      }];
+    }
+
+    // Only fetch previous data if we have current data
     const previousResponse = await fetch(
-      `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
+      `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(apiSiteUrl)}/searchAnalytics/query`,
       {
         method: 'POST',
         headers: {
@@ -80,29 +195,7 @@ export async function getSearchAnalytics(filters: AnalyticsFilters): Promise<Sea
       }
     );
 
-    const currentData = (await currentResponse.json()) as GSCResponse;
     const previousData = (await previousResponse.json()) as GSCResponse;
-
-    if (!currentData.rows || currentData.rows.length === 0) {
-      return [{
-        page: currentWebsite,
-        mainKeyword: "No data available",
-        contentScore: 45, // Test value
-        position: 0,
-        traffic: 0,
-        impressions: 0,
-        ctr: 0,
-        clicks: 0,
-        positionTrend: 0,
-        trafficTrend: 0,
-        impressionsTrend: 0,
-        ctrTrend: 0,
-        _position: 0,
-        _traffic: 0,
-        _impressions: 0,
-        _ctr: 0
-      }];
-    }
 
     // Create a map of previous period data for easy lookup
     const previousDataMap = new Map(
@@ -221,9 +314,12 @@ export async function getSearchAnalytics(filters: AnalyticsFilters): Promise<Sea
 
   } catch (error) {
     console.error('Error fetching search analytics:', error);
+    // Get current website or use a placeholder if none is selected
+    const errorWebsite = await getCurrentWebsite(urlParams) || 'No website selected';
+    
     // Return a fallback state instead of throwing
     return [{
-      page: await getCurrentWebsite(),
+      page: errorWebsite,
       mainKeyword: "Error loading data",
       contentScore: 0,
       position: 0,

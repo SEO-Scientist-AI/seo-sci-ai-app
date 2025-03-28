@@ -14,15 +14,36 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ExternalLink, Globe } from "lucide-react";
+import { ExternalLink, Globe, AlertCircle, Info } from "lucide-react";
 import { auth } from "@/server/auth";
 
 export const runtime = "edge";
 
-export default async function SettingsPage() {
-  const currentWebsite = await getCurrentWebsite();
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
+  const urlParams = new URLSearchParams();
+  
+  // Convert searchParams to URLSearchParams
+  if (searchParams) {
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (typeof value === 'string') {
+        urlParams.set(key, value);
+      } else if (Array.isArray(value)) {
+        value.forEach(v => urlParams.append(key, v));
+      }
+    });
+  }
+  
+  // Get current website from URL params only now
+  const currentWebsite = await getCurrentWebsite(urlParams);
   const session = await auth();
   const userName = session?.user?.name || "User";
+  
+  // No more cookie checks
+  const isRecentWebsiteUsed = false;
 
   return (
     <div className="px-8 py-6 w-full">
@@ -64,12 +85,40 @@ export default async function SettingsPage() {
                   <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
                   <Input
                     id="website"
-                    value={`${currentWebsite}.com`}
+                    value={currentWebsite ? `${currentWebsite}.com` : "No website selected"}
                     readOnly
                     className="bg-muted/50 cursor-not-allowed border-border/40"
                   />
                 </div>
               </div>
+
+              {!currentWebsite && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 p-3 rounded-md text-sm">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium">No website selected</p>
+                      <p className="text-xs mt-1">
+                        Please select a website using the URL parameter <code className="bg-amber-100/50 dark:bg-amber-900/50 px-1 py-0.5 rounded">?website=yoursite</code>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {isRecentWebsiteUsed && (
+                <div className="bg-blue-50 dark:bg-blue-950/20 text-blue-800 dark:text-blue-300 p-3 rounded-md text-sm">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium">Using recently selected website</p>
+                      <p className="text-xs mt-1">
+                        This is your most recently selected website. To change websites, use the URL parameter <code className="bg-blue-100/50 dark:bg-blue-900/50 px-1 py-0.5 rounded">?website=newsite</code>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <Label
