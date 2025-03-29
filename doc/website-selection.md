@@ -1,84 +1,100 @@
 # Website Selection System
 
 ## Feature Description
-A robust website selection system that manages the currently selected website/property across the application using URL parameters and state management.
+A robust website selection system that manages the currently selected website/property across the application using a combination of URL parameters and localStorage for persistence.
 
 ## Implementation Details
 
+### Selection Persistence Mechanism
+- URL parameters serve as the primary method for sharing links to specific websites
+- localStorage used to remember the user's most recently selected website across sessions
+- No cookies used for website selection, keeping client-side only storage
+
 ### URL Parameter Structure
-- Parameter Name: `propertyId`
-- Format: `https://seo-sci-ai.com/dashboard/[propertyId]`
-- Example: `https://seo-sci-ai.com/dashboard/sc-domain:example.com`
+- Parameter Name: `website`
+- Format: `?website=domain.com`
+- Example: `https://seo-sci-ai.com/page-audit?website=example.com`
 
 ### Data Flow
-1. Initial Property List
-   - Properties fetched from Google Search Console API
-   - Displayed on dashboard using PropertyCard components
-   - Each card links to property-specific dashboard
+1. Website Selection
+   - The WebsiteSelector component in the top navigation displays available websites
+   - When a website is selected, it's stored in localStorage and added to the URL parameters
+   - URL is updated with the selected website, maintaining other parameters
 
-2. Property Selection
-   - User clicks on a property card
-   - URL updates with property ID parameter
-   - Dashboard layout updates to show property-specific data
-   - Selection persists across navigation
+2. Website Retrieval Priority
+   - First check URL parameters (`website` or `site` param)
+   - If not found in URL, check localStorage
+   - Display selector if no website is found in either source
 
 3. State Management
-   - URL parameter serves as source of truth
-   - Server components read propertyId from URL
-   - Client components access current property through URL
-   - No additional client-side state management needed
+   - URL parameter for sharing and bookmarking
+   - localStorage for cross-session persistence
+   - No server-side state management needed
 
 ## Expected Behavior
-- Clean URLs with property identification
-- Persistent selection across page navigation
-- Direct URL access to specific properties
-- Proper handling of property switching
-- Maintenance of selection during session
+- Website selection persists across browser sessions using localStorage
+- Clicking links with website parameters updates localStorage with the selected website
+- Direct URL access to specific website data works through URL parameters
+- Consistent UI showing WebsiteSelector in navigation bar
+- When no website is selected, appropriate UI shows website selector prominently
 
 ## Edge Cases
-- Invalid property IDs in URL
-- Non-existent properties
+- Invalid website IDs in URL
+- Non-existent websites
 - User access revocation mid-session
-- Multiple property parameters
-- URL encoding/decoding of special characters
+- Multiple website parameters
+- First-time users with no localStorage data
 
 ## Security Considerations
-- Validation of property access rights
+- Validation of website access rights
 - Sanitization of URL parameters
-- Prevention of unauthorized property access
-- Proper error handling for invalid selections
+- Prevention of unauthorized website access
+- No sensitive data stored in localStorage
 
 ## Dependencies
-- Next.js App Router
-- Dynamic route segments
-- Google Search Console API
-- PropertyCard component
+- Client-side localStorage handling
+- WebsiteSelector component
+- Next.js URL handling (useSearchParams, usePathname)
 - Dashboard layout
 
 ## Code Examples
 
-### URL Pattern (app/dashboard/[propertyId]/page.tsx)
+### Saving Website Selection
 ```typescript
-export default async function PropertyDashboard({ 
-  params: { propertyId } 
-}: { 
-  params: { propertyId: string } 
-}) {
-  // Validate and use propertyId
+// Store in localStorage
+function saveWebsiteToLocalStorage(website: string): void {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('selectedWebsite', website)
+    } catch (error) {
+      console.error('Failed to save website to localStorage:', error)
+    }
+  }
 }
 ```
 
-### Property Card Navigation
+### Loading Selected Website
 ```typescript
-<Link href={`/dashboard/${property.id}`}>
-  <PropertyCard property={property} />
-</Link>
+// Check URL first, then localStorage
+function getSelectedWebsite() {
+  // First try from URL
+  const websiteFromURL = getWebsiteFromURL(window.location.href);
+  if (websiteFromURL) return websiteFromURL;
+  
+  // Then check localStorage
+  return getWebsiteFromLocalStorage();
+}
+```
+
+### WebsiteSelector Component
+```typescript
+<WebsiteSelector websites={availableWebsites} />
 ```
 
 ## Error States
-1. Invalid Property ID
-   - Show 404 error page
-   - Provide link back to property selection
+1. Invalid Website ID
+   - Show "Website not found" message
+   - Present selector to choose a valid website
    
 2. Unauthorized Access
    - Redirect to dashboard
@@ -90,7 +106,7 @@ export default async function PropertyDashboard({
 
 ## Testing Considerations
 - URL parameter validation
-- Property access verification
+- localStorage persistence across sessions
 - Navigation flow testing
 - Error state handling
-- Performance impact of URL-based state 
+- Incognito mode behavior (no localStorage) 

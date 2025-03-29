@@ -1,4 +1,4 @@
-import KeywordResearch from "@/components/keyword-research"
+import KeywordResearch from "@/components/dashboard/keyword-research/keyword-research"
 
 export const runtime = 'edge';
 

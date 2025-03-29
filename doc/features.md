@@ -27,10 +27,10 @@ A secure authentication system using Google OAuth through NextAuth.js.
 A central dashboard that displays website properties from Google Search Console and provides navigation to other features.
 
 ### Expected Behavior
-- Lists all websites the user has access to in Google Search Console
-- Allows selection of a website for detailed analysis via URL parameters
-- Maintains website selection through URL parameters as users navigate
-- Properly handles cases when no website is selected
+- Lists all websites the user has access to in Google Search Console via the WebsiteSelector
+- Persists website selection in localStorage for cross-session memory
+- Shows website selector in the navigation bar for easy switching
+- Properly handles cases when no website is selected by presenting website selection UI
 - Provides navigation to page audit and AI writer features
 - Responsive design that works across device sizes
 
@@ -38,12 +38,36 @@ A central dashboard that displays website properties from Google Search Console 
 - Handling users with no website properties
 - Managing API rate limits for Google Search Console
 - Loading states during data fetching
-- Gracefully handling invalid website parameters in URL
+- Gracefully handling the first visit when no website is saved in localStorage
+- Handling incognito mode where localStorage may be cleared on session end
 
 ### Dependencies
 - Google Search Console API
-- Website selector component
+- WebsiteSelector component
+- localStorage utilities
 - Dashboard layout component
+
+## Website Selection System
+
+### Feature Description
+A system for selecting, saving, and retrieving the user's chosen website across sessions.
+
+### Expected Behavior
+- Persists selected website in localStorage
+- Uses URL parameters for shareable links and bookmarking
+- WebsiteSelector component in navigation shows available websites
+- Automatically restores previously selected website when returning to the app
+- Updates URL parameters when selection changes for consistent navigation
+
+### Edge Cases
+- First time users with no stored website
+- Invalid saved websites that are no longer accessible
+- Cross-device usage where localStorage isn't shared
+
+### Dependencies
+- localStorage browser API
+- URL parameter handling (useSearchParams)
+- WebsiteSelector component
 
 ## Page Audit System
 
@@ -55,6 +79,7 @@ A performance analysis tool that shows SEO metrics for pages from the selected w
 - Allows filtering and sorting of page data
 - Shows performance trends over time
 - Identifies underperforming pages that need optimization
+- Provides direct access to edit content in AI Writer from the page list
 
 ### Edge Cases
 - Handling large datasets with pagination
@@ -76,6 +101,7 @@ A content creation and optimization tool with AI assistance capabilities.
 - Ability to import content from existing URLs
 - Side panel for AI suggestions and content optimization
 - Markdown support for structured content
+- Seamless navigation from page audit to edit specific pages
 
 ### Edge Cases
 - Handling large content imports

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { getWebsiteFromURL } from '@/lib/utils/website'
+import { getWebsiteFromURL, saveWebsiteToLocalStorage, getWebsiteFromLocalStorage } from '@/lib/utils/website'
 import { Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -11,6 +11,9 @@ type WebsiteSelectorProps = {
   websites: string[]
   className?: string
 }
+
+// localStorage key for storing the selected website
+const WEBSITE_STORAGE_KEY = 'selectedWebsite'
 
 export function WebsiteSelector({ 
   websites = [],
@@ -26,23 +29,43 @@ export function WebsiteSelector({
   // Set the selected website when the component mounts or URL changes
   useEffect(() => {
     try {
+      // First try to get website from URL
       const currentWebsite = getWebsiteFromURL(window.location.href)
       
       if (currentWebsite) {
+        // If found in URL, update state and save to localStorage
         setSelectedWebsite(currentWebsite)
+        saveWebsiteToLocalStorage(currentWebsite)
       } else {
-        setSelectedWebsite('')
+        // If not in URL, try to get from localStorage
+        const storedWebsite = getWebsiteFromLocalStorage()
+        
+        if (storedWebsite && websites.includes(storedWebsite)) {
+          // If found in localStorage and it's in the available websites list, use it
+          setSelectedWebsite(storedWebsite)
+          
+          // Redirect to include the website parameter for consistency
+          const params = new URLSearchParams(searchParams.toString())
+          params.set('website', storedWebsite)
+          const newUrl = `${pathname}?${params.toString()}`
+          router.replace(newUrl)
+        } else {
+          setSelectedWebsite('')
+        }
       }
     } catch (error) {
-      console.error("Error getting website from URL:", error)
+      console.error("Error getting website:", error)
       setSelectedWebsite('')
     }
-  }, [searchParams])
+  }, [searchParams, websites, pathname, router])
   
   // Handle website change
   const handleWebsiteChange = (website: string) => {
     // If the website selection hasn't changed, don't do anything
     if (website === selectedWebsite) return;
+    
+    // Save to localStorage
+    saveWebsiteToLocalStorage(website)
     
     // Create new URLSearchParams to maintain other query parameters
     const params = new URLSearchParams(searchParams.toString())

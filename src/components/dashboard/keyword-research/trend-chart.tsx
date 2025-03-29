@@ -1,7 +1,6 @@
 "use client"
 
-
-import { CartesianGrid, Line, LineChart, XAxis } from "recharts"
+import { CartesianGrid, Line, LineChart, ResponsiveContainer } from "recharts"
 import {
   ChartConfig,
   ChartContainer,
@@ -24,43 +23,36 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function TrendChart({data}:{data:number[]}) {
-    // console.log("data",data)
-    const chartData = data.map((item:number)=> {
-        return {data:item}
-    })
+export function TrendChart({ data }: { data: number[] }) {
+  const chartData = data.map((value, index) => ({
+    index,
+    data: value
+  }))
+  
   return (
-    
+    <div className="h-10 w-full">
+      <ResponsiveContainer width="100%" height="100%">
         <ChartContainer config={chartConfig}>
           <LineChart
-            accessibilityLayer
             data={chartData}
-            margin={{
-              left: 12,
-              right: 12,
-            }}
+            margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
           >
-            <CartesianGrid vertical={false} />
-            {/* <XAxis
-              dataKey="month"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value) => value.slice(0, 3)}
-            /> */}
-            {/* <ChartTooltip
+            <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.4} />
+            <ChartTooltip
               cursor={false}
-              content={<ChartTooltipContent hideLabel />}
-            /> */}
+              content={<ChartTooltipContent />}
+            />
             <Line
-              dataKey="data"
               type="linear"
+              dataKey="data"
               stroke="var(--color-desktop)"
               strokeWidth={2}
               dot={false}
+              activeDot={{ r: 4, fill: "var(--color-desktop)" }}
             />
           </LineChart>
         </ChartContainer>
-     
+      </ResponsiveContainer>
+    </div>
   )
 }

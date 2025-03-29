@@ -501,12 +501,9 @@ export function PagesTable({ initialPages }: PagesTableProps) {
                                   e.stopPropagation();
                                   // Add timestamp to force fresh data scrape
                                   const timestamp = Date.now();
-                                  window.open(
-                                    `/ai-writer?url=${encodeURIComponent(
-                                      page.page
-                                    )}&refresh=${timestamp}`,
-                                    "_blank"
-                                  );
+                                  window.location.href = `/ai-writer?url=${encodeURIComponent(
+                                    page.page
+                                  )}&refresh=${timestamp}`;
                                 }}
                               >
                                 <Pencil className="h-4 w-4" />

@@ -28,13 +28,13 @@ export async function setWebsite(website: string) {
 }
 
 /**
- * Get the current website from URL parameters or cookies
+ * Get the current website from URL parameters only
+ * Client-side code will handle localStorage persistence
  */
 export async function getCurrentWebsite(urlParams?: URLSearchParams): Promise<string | null> {
+  // If no URL parameters provided, return null - client-side will check localStorage
   if (!urlParams) {
-    console.log("No URL parameters provided, checking cookies");
-    // If no URL parameters are provided, we'll need to handle this case differently
-    // in a real implementation, you might check cookies or another source
+    console.log("No URL parameters provided, client will check localStorage");
     return null;
   }
   
@@ -53,10 +53,11 @@ export async function getCurrentWebsite(urlParams?: URLSearchParams): Promise<st
     console.log("Found 'site' parameter:", siteFromUrl);
     if (siteFromUrl) {
       // Clean the URL
-      return cleanWebsiteUrl(siteFromUrl);
+      const cleanUrl = cleanWebsiteUrl(siteFromUrl);
+      return cleanUrl;
     }
   }
   
-  console.log("No website parameter found in URL");
-  return null; // Return null if no website is selected
+  console.log("No website found in URL parameters");
+  return null; // Return null if no website is selected in the URL
 } 

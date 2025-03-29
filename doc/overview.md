@@ -11,6 +11,7 @@ The SEO Scientist application has been developed with the following tech stack:
 - **Theming**: Light/dark mode support implemented via next-themes
 - **Edge Functions**: Cloudflare Wrangler for fast execution
 - **Markdown Editor**: Novel.js for rich content editing
+- **State Persistence**: localStorage for client-side persistence of user preferences
 
 ## Core Features Implemented
 
@@ -24,8 +25,8 @@ The SEO Scientist application has been developed with the following tech stack:
 ### Dashboard Interface
 
 - Main dashboard layout with responsive design
-- Website property selector for switching between different properties
-- Navigation sidebar with links to various features
+- Website selector component in the navigation bar for switching between different websites
+- Persistent website selection using localStorage for cross-session memory
 - User profile and settings access
 
 ### Page Audit System
@@ -34,6 +35,7 @@ The SEO Scientist application has been developed with the following tech stack:
 - Page performance analytics display
 - Filtering and sorting capabilities for page data
 - Detailed page metrics visualization
+- Inline actions for page editing with AI Writer
 
 ### AI Writer Tool
 
@@ -41,6 +43,7 @@ The SEO Scientist application has been developed with the following tech stack:
 - Content scraping feature to import existing web content
 - Side panel for AI suggestions and optimizations
 - Markdown content support
+- Seamless integration with page audit for content optimization
 
 ### Database Schema
 
@@ -53,10 +56,11 @@ The SEO Scientist application has been developed with the following tech stack:
 1. Users land on the homepage and can sign in with Google
 2. After authentication, users are directed to the dashboard
 3. From the dashboard, users can:
-   - View their Google Search Console properties
-   - Select properties to analyze
+   - View their Google Search Console properties in the website selector
+   - Select websites to analyze (selection persists via localStorage)
    - Navigate to the Page Audit section to view page performance
-   - Access the AI Writer tool to optimize content
+   - Access the AI Writer tool to optimize content directly from the page audit
+4. The application remembers the user's selected website across sessions
 
 ## API Integration
 
@@ -66,7 +70,7 @@ The SEO Scientist application has been developed with the following tech stack:
 ## UI Components
 
 - Responsive navigation
-- Dashboard cards and property selector
+- Website selector dropdown with localStorage persistence
 - Analytics filters and data tables
 - Theme toggler for light/dark mode
 - Rich text editor with markdown support
@@ -79,3 +83,4 @@ The application has a solid foundation with authentication, basic dashboard, pag
 2. Implementing A/B testing features
 3. Adding more detailed analytics and reporting
 4. Enhancing the content editor with SEO-specific tools
+5. Further improving the user experience with refined UI transitions and interactions

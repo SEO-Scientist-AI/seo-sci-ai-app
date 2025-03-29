@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Editor from "@/components/editor"
-import { RightSidebar } from "@/components/dashboard/analytics/ai-writer-right-sidebar"
+import { RightSidebar } from "@/components/dashboard/ai-writter/ai-writer-right-sidebar"
 import { cn } from "@/lib/utils"
 import { useSearchParams } from "next/navigation"
 import { Skeleton } from "@/components/ui/skeleton"
