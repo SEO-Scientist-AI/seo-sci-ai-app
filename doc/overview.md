@@ -39,11 +39,26 @@ The SEO Scientist application has been developed with the following tech stack:
 
 ### AI Writer Tool
 
-- Rich text editor using Novel.js
-- Content scraping feature to import existing web content
-- Side panel for AI suggestions and optimizations
-- Markdown content support
-- Seamless integration with page audit for content optimization
+- Rich text editor using Novel.js with markdown support
+- Real-time content analysis and scoring system:
+  - Keyword Usage Analysis (30%)
+  - Title & Meta Analysis (20%)
+  - Readability Analysis (50%)
+- Dynamic content score calculation using real data
+- Content scraping with metadata extraction
+- Loading states and progress indicators
+- Auto-optimization suggestions
+- Internal linking recommendations
+- Copy-to-clipboard functionality for keywords
+
+### Content Analysis System
+
+- Real-time analysis using multiple specialized APIs
+- Weighted scoring system based on industry best practices
+- Integration with content scraping for metadata analysis
+- Progress tracking and visual feedback
+- Error handling and graceful degradation
+- Loading states and skeleton UI
 
 ### Database Schema
 

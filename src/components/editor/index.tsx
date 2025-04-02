@@ -323,8 +323,8 @@ const Editor = ({ pageUrl, pageContent }: EditorProps) => {
   return (
     <div className="relative w-full max-w-screen-lg">
       {pageUrl && (
-        <div className="absolute left-5 top-5 z-10 mb-5 gap-2 bg-accent px-3 py-1.5 text-sm text-muted-foreground rounded-md">
-          Editing: {pageUrl.replace(/^https?:\/\//, '')}
+        <div className="absolute left-5 top-5 z-10 mb-5 gap-2 bg-accent px-3 py-1.5 text-sm text-muted-foreground">
+          Editing: /{pageUrl.split('/').pop()}
         </div>
       )}
       <div className="flex absolute right-5 top-5 z-10 mb-5 gap-2 ">

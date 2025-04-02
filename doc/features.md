@@ -94,24 +94,47 @@ A performance analysis tool that shows SEO metrics for pages from the selected w
 ## AI Writer Tool
 
 ### Feature Description
-A content creation and optimization tool with AI assistance capabilities.
+A comprehensive content creation and optimization tool with real-time AI-powered analysis and scoring.
 
 ### Expected Behavior
-- Rich text editor for content creation and editing
-- Ability to import content from existing URLs
-- Side panel for AI suggestions and content optimization
-- Markdown support for structured content
-- Seamless navigation from page audit to edit specific pages
+- Rich text editor for content creation and editing using Novel.js
+- Content import from URLs via scraping API
+- Real-time content analysis with three main components:
+  1. Keyword Usage Analysis (30% of score)
+     - Title tag keyword presence
+     - Meta description keyword presence
+     - H1 keyword presence
+     - First 100 words keyword presence
+  2. Title & Meta Analysis (20% of score)
+     - Title length optimization (55-60 characters)
+     - Meta description length optimization (150-160 characters)
+  3. Readability Analysis (50% of score)
+     - Paragraph structure
+     - Writing tone
+     - Passive voice usage
+     - User intent matching
+     - Emotional appeal
+- Dynamic content score calculation based on real analysis data
+- Loading states and progress indicators for all analyses
+- Copy-to-clipboard functionality for keywords
+- Auto-optimization suggestions
+- Internal linking recommendations
 
 ### Edge Cases
 - Handling large content imports
 - Managing API errors during content scraping
-- Fallback behavior when AI services are unavailable
+- Graceful degradation when analyses are incomplete
+- Proper state management during concurrent analyses
+- Handling metadata extraction failures
+- Recovery from API timeouts or failures
 
 ### Dependencies
 - Novel.js editor
-- Content scraping API
-- AI assistance sidebar component
+- Content scraping API integration
+- Real-time analysis APIs
+- CircularProgress component for score visualization
+- Skeleton loading components
+- Toast notifications for user feedback
 
 ## Theme System
 

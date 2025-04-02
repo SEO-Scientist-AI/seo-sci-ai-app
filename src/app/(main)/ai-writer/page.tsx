@@ -6,6 +6,10 @@ import { RightSidebar } from "@/components/dashboard/ai-writter/ai-writer-right-
 import { cn } from "@/lib/utils"
 import { useSearchParams } from "next/navigation"
 import { Skeleton } from "@/components/ui/skeleton"
+import { extractKeywords } from "@/app/actions/extractKeywords"
+import { evaluateKeywordUsage } from "@/app/actions/evaluateKeywordUsage"
+import { evaluateTitleMeta } from "@/app/actions/evaluateTitleMeta"
+import { evaluateReadability } from "@/app/actions/evaluateReadability"
 
 export const runtime = 'edge';
 
@@ -33,6 +37,14 @@ export default function AIWriter() {
   const [pageUrl, setPageUrl] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [extractedKeywords, setExtractedKeywords] = useState<string[]>([])
+  const [isExtractingKeywords, setIsExtractingKeywords] = useState(false)
+  const [keywordUsageAnalysis, setKeywordUsageAnalysis] = useState<any>(null)
+  const [isAnalyzingKeywordUsage, setIsAnalyzingKeywordUsage] = useState(false)
+  const [titleMetaAnalysis, setTitleMetaAnalysis] = useState<any>(null)
+  const [isAnalyzingTitleMeta, setIsAnalyzingTitleMeta] = useState(false)
+  const [readabilityAnalysis, setReadabilityAnalysis] = useState<any>(null)
+  const [isAnalyzingReadability, setIsAnalyzingReadability] = useState(false)
   
   const searchParams = useSearchParams()
   const url = searchParams.get('url')
@@ -41,6 +53,25 @@ export default function AIWriter() {
   const handleCloseSidebar = () => {
     setSidebarOpen(false)
   }
+  
+  // Fetch keywords when pageContent changes
+  useEffect(() => {
+    const getKeywords = async () => {
+      if (!pageContent) return
+      
+      setIsExtractingKeywords(true)
+      try {
+        const keywords = await extractKeywords(pageContent)
+        setExtractedKeywords(keywords)
+      } catch (err) {
+        console.error("Error extracting keywords:", err)
+      } finally {
+        setIsExtractingKeywords(false)
+      }
+    }
+    
+    getKeywords()
+  }, [pageContent])
   
   // Fetch page content if URL is provided
   useEffect(() => {
@@ -54,8 +85,8 @@ export default function AIWriter() {
       try {
         console.log("Fetching content for URL:", url, "Refresh:", refreshParam)
         
-        // Create base64 encoded credentials if needed
-        const credentials = btoa(
+        // Browser-safe base64 encoding for client-side
+        const credentials = window.btoa(
           `${process.env.NEXT_PUBLIC_API_USER}:${process.env.NEXT_PUBLIC_API_PASSWORD}`
         )
         
@@ -99,6 +130,94 @@ export default function AIWriter() {
     
     fetchPageContent()
   }, [url, refreshParam])
+
+  // Add new useEffect for keyword usage analysis
+  useEffect(() => {
+    const analyzeKeywordUsage = async () => {
+      if (!pageContent || !extractedKeywords.length) return
+      
+      setIsAnalyzingKeywordUsage(true)
+      try {
+        const analysis = await evaluateKeywordUsage(pageContent, extractedKeywords[0])
+        setKeywordUsageAnalysis(analysis)
+      } catch (err) {
+        console.error("Error analyzing keyword usage:", err)
+      } finally {
+        setIsAnalyzingKeywordUsage(false)
+      }
+    }
+    
+    analyzeKeywordUsage()
+  }, [pageContent, extractedKeywords])
+
+  // Add new useEffect for title meta analysis
+  useEffect(() => {
+    const analyzeTitleMeta = async () => {
+      if (!pageContent) return
+      
+      setIsAnalyzingTitleMeta(true)
+      try {
+        // Get the metadata from localStorage
+        const pageUrl = window.localStorage.getItem("editing-page-url");
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE}/scrape/page`,
+          {
+            method: "POST",
+            headers: {
+              accept: "application/json",
+              Authorization: `Basic ${window.btoa(
+                `${process.env.NEXT_PUBLIC_API_USER}:${process.env.NEXT_PUBLIC_API_PASSWORD}`
+              )}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              url: pageUrl?.startsWith("http") ? pageUrl : `https://${pageUrl}`,
+              include_markdown: false,
+              include_links: false,
+              include_images: false,
+              force_refresh: false,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch metadata: ${response.status}`);
+        }
+
+        const data = (await response.json()) as ScrapeResponse;
+        const analysis = await evaluateTitleMeta({
+          title: data.metadata.title,
+          description: data.metadata.description
+        });
+        setTitleMetaAnalysis(analysis);
+      } catch (err) {
+        console.error("Error analyzing title and meta:", err)
+      } finally {
+        setIsAnalyzingTitleMeta(false)
+      }
+    }
+    
+    analyzeTitleMeta()
+  }, [pageContent])
+
+  // Add new useEffect for readability analysis
+  useEffect(() => {
+    const analyzeReadability = async () => {
+      if (!pageContent || !extractedKeywords.length) return
+      
+      setIsAnalyzingReadability(true)
+      try {
+        const analysis = await evaluateReadability(pageContent, extractedKeywords[0])
+        setReadabilityAnalysis(analysis)
+      } catch (err) {
+        console.error("Error analyzing readability:", err)
+      } finally {
+        setIsAnalyzingReadability(false)
+      }
+    }
+    
+    analyzeReadability()
+  }, [pageContent, extractedKeywords])
   
   return (
     <div className="relative flex w-full h-screen overflow-auto scrollbar-hide">
@@ -145,7 +264,18 @@ export default function AIWriter() {
         sidebarOpen ? "translate-x-0" : "translate-x-full"
       )}>
         <RightSidebar 
-          page={pageUrl ? { page: pageUrl, mainKeyword: "" } as any : null}
+          page={pageUrl ? { 
+            page: pageUrl, 
+            mainKeyword: extractedKeywords[0] || "", 
+            keywords: extractedKeywords,
+            isLoadingKeywords: isExtractingKeywords,
+            keywordUsageAnalysis: keywordUsageAnalysis,
+            isAnalyzingKeywordUsage: isAnalyzingKeywordUsage,
+            titleMetaAnalysis: titleMetaAnalysis,
+            isAnalyzingTitleMeta: isAnalyzingTitleMeta,
+            readabilityAnalysis: readabilityAnalysis,
+            isAnalyzingReadability: isAnalyzingReadability
+          } as any : null}
           onClose={handleCloseSidebar}
           open={sidebarOpen}
         />

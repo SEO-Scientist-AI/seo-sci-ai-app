@@ -1,15 +1,17 @@
 "use client"
-import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { X, RefreshCw, Loader2, CheckCircle2, AlertCircle, Search, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Input } from "@/components/ui/input"
-import { CircularProgress } from "@/components/dashboard/circular-score"
 import { CONTENT_STRUCTURE_UPDATE_EVENT, ContentStructureMetrics } from "@/components/editor"
+
+// Import section components
+import { ContentScoreSection } from "./content-score-section"
+import { KeywordsSection } from "./keywords-section"
+import { KeywordUsageSection } from "./keyword-usage-section"
+import { TitleMetaSection } from "./title-meta-section"
+import { ReadabilitySection } from "./readability-section"
+import { ContentStructureSection } from "./content-structure-section"
 
 interface SearchAnalyticsPage {
   page: string
@@ -18,7 +20,15 @@ interface SearchAnalyticsPage {
   ctr: number
   position: number
   contentScore: number
-  keywords: string[]
+  keywords?: string[]
+  mainKeyword?: string
+  isLoadingKeywords?: boolean
+  keywordUsageAnalysis?: any
+  isAnalyzingKeywordUsage?: boolean
+  titleMetaAnalysis?: any
+  isAnalyzingTitleMeta?: boolean
+  readabilityAnalysis?: any
+  isAnalyzingReadability?: boolean
   wordCount?: number
   headingCount?: number
   paragraphCount?: number
@@ -101,16 +111,29 @@ interface PageDetailsSidebarProps {
 // Add dummy data for the example
 const dummyPage: SearchAnalyticsPage = {
   page: "https://example.com/blog/how-to-optimize-content",
-  clicks: 245,
-  impressions: 3890,
-  ctr: 0.063,
-  position: 4.2,
-  contentScore: 82,
+  clicks: 0,
+  impressions: 0,
+  ctr: 0,
+  position: 0,
+  contentScore: 0,
   keywords: ["content marketing", "SEO", "optimization", "content strategy", "marketing metrics"],
   wordCount: 0,
   headingCount: 0,
   paragraphCount: 0,
   imageCount: 0,
+}
+
+// Navigation Tabs Component
+function NavigationTabs() {
+  return (
+    <div className="border-b border-border">
+      <div className="flex">
+        <button className="px-6 py-3 text-primary border-b-2 border-primary font-medium">GUIDELINES</button>
+        <button className="px-6 py-3 text-muted-foreground hover:text-foreground">OUTLINE</button>
+        <button className="px-6 py-3 text-muted-foreground hover:text-foreground">BRIEF</button>
+      </div>
+    </div>
+  )
 }
 
 export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSidebarProps) {
@@ -244,6 +267,59 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
     }
   }, [page?.page])
 
+  const handleRefreshContentStructure = () => {
+    // Manually trigger a content analysis of what's currently in the editor
+    const content = window.localStorage.getItem("novel-content");
+    const markdown = window.localStorage.getItem("markdown");
+    
+    if (!content || !markdown) {
+      toast.error("No content to analyze");
+      return;
+    }
+    
+    try {
+      // Get accurate word count from markdown
+      const wordCount = markdown.split(/\s+/).filter(Boolean).length;
+      
+      // Parse the editor's content JSON
+      const json = JSON.parse(content);
+      let headingCount = 0;
+      let paragraphCount = 0;
+      let imageCount = 0;
+      
+      // Recursive function to count content elements
+      const countNodes = (nodes: any[]) => {
+        if (!nodes) return;
+        for (const node of nodes) {
+          if (node.type === 'heading') headingCount++;
+          if (node.type === 'paragraph') paragraphCount++;
+          if (node.type === 'image') imageCount++;
+          if (node.content) countNodes(node.content);
+        }
+      };
+      
+      if (json.content) countNodes(json.content);
+      
+      // Update metrics with real values
+      const updatedMetrics = {
+        wordCount,
+        headingCount,
+        paragraphCount,
+        imageCount
+      };
+      
+      setContentMetrics(updatedMetrics);
+      
+      // Log the metrics for debugging
+      console.log("Refreshed content structure metrics:", updatedMetrics);
+      
+      toast.success("Content structure metrics refreshed");
+    } catch (error) {
+      console.error("Failed to refresh content metrics:", error);
+      toast.error("Failed to refresh content metrics");
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -253,377 +329,43 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
     >
       {page && (
         <>
-          <div className="border-b border-border">
-            <div className="flex">
-              <button className="px-6 py-3 text-primary border-b-2 border-primary font-medium">GUIDELINES</button>
-              <button className="px-6 py-3 text-muted-foreground hover:text-foreground">OUTLINE</button>
-              <button className="px-6 py-3 text-muted-foreground hover:text-foreground">BRIEF</button>
-            </div>
-          </div>
+          <NavigationTabs />
 
           <ScrollArea className="h-[calc(100vh-4rem-3rem)]">
             <div className="p-4 space-y-6">
-              {/* Content Score Section */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium text-muted-foreground">Content Score</h4>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 px-2">
-                          <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                          <span>Refresh</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Refresh content score</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
+              <ContentScoreSection 
+                keywordUsageAnalysis={page.keywordUsageAnalysis}
+                titleMetaAnalysis={page.titleMetaAnalysis}
+                readabilityAnalysis={page.readabilityAnalysis}
+                isLoading={page.isAnalyzingKeywordUsage || page.isAnalyzingTitleMeta || page.isAnalyzingReadability}
+              />
+              
+              <ContentStructureSection 
+                metrics={contentMetrics}
+                onRefresh={handleRefreshContentStructure}
+              />
 
-                <div className="flex justify-center py-4">
-                  <CircularProgress 
-                    value={page.contentScore} 
-                    size="large"
-                    title="Content Score" 
-                  />
-                </div>
+              <KeywordsSection 
+                keywords={page.keywords}
+                mainKeyword={page.mainKeyword}
+                isLoading={page.isLoadingKeywords}
+              />
+              
+              <KeywordUsageSection 
+                analysis={page.keywordUsageAnalysis}
+                isLoading={page.isAnalyzingKeywordUsage}
+                mainKeyword={page.mainKeyword}
+              />
 
-                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground mt-4">
-                  <span className="mr-2">✨</span>
-                  Auto-Optimize
-                </Button>
+              <TitleMetaSection 
+                analysis={page.titleMetaAnalysis}
+                isLoading={page.isAnalyzingTitleMeta}
+              />
 
-                <Button variant="outline" className="w-full mt-2 border-border">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="mr-2"
-                  >
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                  </svg>
-                  Insert internal links
-                </Button>
-              </div>
-
-              {/* Content Structure Section */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium text-muted-foreground">Content Structure</h4>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 px-2"
-                          onClick={() => {
-                            // Manually trigger a content analysis of what's currently in the editor
-                            const content = window.localStorage.getItem("novel-content");
-                            const markdown = window.localStorage.getItem("markdown");
-                            
-                            if (!content || !markdown) {
-                              toast.error("No content to analyze");
-                              return;
-                            }
-                            
-                            try {
-                              // Get accurate word count from markdown
-                              const wordCount = markdown.split(/\s+/).filter(Boolean).length;
-                              
-                              // Parse the editor's content JSON
-                              const json = JSON.parse(content);
-                              let headingCount = 0;
-                              let paragraphCount = 0;
-                              let imageCount = 0;
-                              
-                              // Recursive function to count content elements
-                              const countNodes = (nodes: any[]) => {
-                                if (!nodes) return;
-                                for (const node of nodes) {
-                                  if (node.type === 'heading') headingCount++;
-                                  if (node.type === 'paragraph') paragraphCount++;
-                                  if (node.type === 'image') imageCount++;
-                                  if (node.content) countNodes(node.content);
-                                }
-                              };
-                              
-                              if (json.content) countNodes(json.content);
-                              
-                              // Update metrics with real values
-                              const updatedMetrics = {
-                                wordCount,
-                                headingCount,
-                                paragraphCount,
-                                imageCount
-                              };
-                              
-                              setContentMetrics(updatedMetrics);
-                              
-                              // Log the metrics for debugging
-                              console.log("Refreshed content structure metrics:", updatedMetrics);
-                              
-                              toast.success("Content structure metrics refreshed");
-                            } catch (error) {
-                              console.error("Failed to refresh content metrics:", error);
-                              toast.error("Failed to refresh content metrics");
-                            }
-                          }}
-                        >
-                          <RefreshCw className="h-4 w-4 mr-1" />
-                          <span>Refresh</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Refresh content structure metrics</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-
-                <div className="grid grid-cols-4 divide-x divide-border">
-                  <div className="px-2 py-3 text-center">
-                    <div className="text-xs text-muted-foreground">WORDS</div>
-                    <div className="flex items-center justify-center gap-1 mt-1">
-                      <span className="text-xl font-semibold">{contentMetrics.wordCount}</span>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className={contentMetrics.wordCount >= 3043 ? "text-green-500" : "text-red-500"}
-                      >
-                        {contentMetrics.wordCount >= 3043 ? (
-                          <path d="M20 6L9 17l-5-5" />
-                        ) : (
-                          <>
-                            <path d="M12 19V5" />
-                            <path d="M5 12l7-7 7 7" />
-                          </>
-                        )}
-                      </svg>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">3,043-3,499</div>
-                  </div>
-
-                  <div className="px-2 py-3 text-center">
-                    <div className="text-xs text-muted-foreground">HEADINGS</div>
-                    <div className="flex items-center justify-center gap-1 mt-1">
-                      <span className="text-xl font-semibold">{contentMetrics.headingCount}</span>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className={contentMetrics.headingCount >= 27 && contentMetrics.headingCount <= 40 ? "text-green-500" : "text-red-500"}
-                      >
-                        {contentMetrics.headingCount >= 27 && contentMetrics.headingCount <= 40 ? (
-                          <path d="M20 6L9 17l-5-5" />
-                        ) : (
-                          <>
-                            <path d="M12 19V5" />
-                            <path d="M5 12l7-7 7 7" />
-                          </>
-                        )}
-                      </svg>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">27-40</div>
-                  </div>
-
-                  <div className="px-2 py-3 text-center">
-                    <div className="text-xs text-muted-foreground">PARAGRAPHS</div>
-                    <div className="flex items-center justify-center gap-1 mt-1">
-                      <span className="text-xl font-semibold">{contentMetrics.paragraphCount}</span>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className={contentMetrics.paragraphCount >= 85 ? "text-green-500" : "text-red-500"}
-                      >
-                        {contentMetrics.paragraphCount >= 85 ? (
-                          <path d="M20 6L9 17l-5-5" />
-                        ) : (
-                          <>
-                            <path d="M12 19V5" />
-                            <path d="M5 12l7-7 7 7" />
-                          </>
-                        )}
-                      </svg>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">at least 85</div>
-                  </div>
-
-                  <div className="px-2 py-3 text-center">
-                    <div className="text-xs text-muted-foreground">IMAGES</div>
-                    <div className="flex items-center justify-center gap-1 mt-1">
-                      <span className="text-xl font-semibold">{contentMetrics.imageCount}</span>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className={contentMetrics.imageCount >= 12 ? "text-green-500" : "text-red-500"}
-                      >
-                        {contentMetrics.imageCount >= 12 ? (
-                          <path d="M20 6L9 17l-5-5" />
-                        ) : (
-                          <>
-                            <path d="M12 19V5" />
-                            <path d="M5 12l7-7 7 7" />
-                          </>
-                        )}
-                      </svg>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">12-20</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Terms Section */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium text-muted-foreground">Terms</h4>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 px-2">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M10 9l-6 6 6 6" />
-                            <path d="M14 9l6 6-6 6" />
-                          </svg>
-                          <span className="ml-1">Adjust</span>
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Adjust terms</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <Search className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <Input type="search" className="pl-10" placeholder="Search" />
-                </div>
-
-                <div className="flex items-center gap-2 mt-4">
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">#Content</span>
-                    <span className="text-sm text-muted-foreground">- 14</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">#Market</span>
-                    <span className="text-sm text-muted-foreground">- 12</span>
-                  </div>
-                </div>
-
-                <div className="flex border-b mt-4">
-                  <button className="px-4 py-2 text-primary border-b-2 border-primary">
-                    All <span className="ml-1 px-1.5 py-0.5 bg-primary text-white rounded-md text-xs">80</span>
-                  </button>
-                  <button className="px-4 py-2 text-muted-foreground">
-                    Headings{" "}
-                    <span className="ml-1 px-1.5 py-0.5 bg-muted text-muted-foreground rounded-md text-xs">5</span>
-                  </button>
-                  <button className="px-4 py-2 text-muted-foreground">
-                    NLP <span className="ml-1 px-1.5 py-0.5 bg-gray-600 text-white rounded-md text-xs">65</span>
-                  </button>
-                </div>
-                <div className="space-y-2 mt-4">
-                  <div className="flex items-center justify-between p-2 rounded-md bg-amber-50 dark:bg-warning/20">
-                    <span className="text-amber-800 dark:text-amber-300">content marketing metrics</span>
-                    <span className="text-amber-800 dark:text-amber-300">7/8-15</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded-md bg-red-50 dark:bg-destructive/20">
-                    <span className="text-red-800 dark:text-red-300">content marketing strategy</span>
-                    <span className="text-red-800 dark:text-red-300 flex items-center">
-                      5/2-4
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="ml-1"
-                      >
-                        <path d="M12 5v14" />
-                        <path d="M19 12l-7 7-7-7" />
-                      </svg>
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded-md bg-red-50 dark:bg-destructive/20">
-                    <span className="text-red-800 dark:text-red-300">content marketing efforts</span>
-                    <span className="text-red-800 dark:text-red-300 flex items-center">
-                      7/3-4
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="ml-1"
-                      >
-                        <path d="M12 5v14" />
-                        <path d="M19 12l-7 7-7-7" />
-                      </svg>
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded-md bg-green-50 dark:bg-success/20">
-                    <span className="text-green-800 dark:text-green-300">content marketing success</span>
-                    <span className="text-green-800 dark:text-green-300">2/2-4</span>
-                  </div>
-                </div>
-              </div>
+              <ReadabilitySection 
+                analysis={page.readabilityAnalysis}
+                isLoading={page.isAnalyzingReadability}
+              />
             </div>
           </ScrollArea>
         </>

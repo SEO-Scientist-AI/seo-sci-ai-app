@@ -78,6 +78,61 @@ A third-party API service used to fetch and analyze content from existing web pa
 }
 ```
 
+### Content Analysis APIs
+
+The application uses several specialized APIs for content analysis and optimization.
+
+1. **Keyword Extraction API**
+   - Extracts main and related keywords from content
+   - Used in: Keywords Section of AI Writer
+
+2. **Keyword Usage Analysis API**
+   - Analyzes keyword placement and usage
+   - Evaluates:
+     - Title tag keyword presence
+     - Meta description keyword presence
+     - H1 keyword presence
+     - First 100 words keyword presence
+   - Contributes 30% to overall content score
+
+3. **Title & Meta Analysis API**
+   - Analyzes metadata from scraped content
+   - Evaluates:
+     - Title length (optimal: 55-60 characters)
+     - Meta description length (optimal: 150-160 characters)
+   - Uses actual page metadata from scraping
+   - Contributes 20% to overall content score
+
+4. **Readability Analysis API**
+   - Evaluates content readability and engagement
+   - Analyzes:
+     - Paragraph structure
+     - Writing tone
+     - Passive voice usage
+     - User intent matching
+     - Emotional storytelling
+   - Contributes 50% to overall content score
+
+### Content Score Calculation
+
+The content score is calculated based on real-time analysis data from multiple APIs:
+
+```typescript
+interface ContentScore {
+  score: number; // 0-100
+  breakdown: {
+    keyword_usage: number; // 0-30
+    title_meta: number; // 0-20
+    readability: number; // 0-50
+  }
+}
+```
+
+**Calculation Method:**
+- Keyword Usage: 7.5 points per criterion (30% total)
+- Title & Meta: 10 points per criterion (20% total)
+- Readability: 10 points per criterion (50% total)
+
 ## Internal API Endpoints
 
 ### Authentication
