@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { requestIndexing } from "@/app/actions/requestIndexing";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { checkIndexingStatus } from "@/app/actions/checkIndexingStatus";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -24,6 +24,23 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { CircularProgress } from "@/components/dashboard/circular-score";
+
+interface ScrapeResponse {
+  url: string;
+  title: string;
+  description: string;
+  author: string;
+  published_date: string;
+  site_name: string;
+  content: string;
+  markdown: string;
+  links: string[];
+  images: string[];
+  metadata: {
+    [key: string]: string;
+  };
+  processing_time: number;
+}
 
 interface PageDetailsSidebarProps {
   page: SearchAnalyticsPage | null;
@@ -45,9 +62,137 @@ function getCleanPath(url: string): string {
   }
 }
 
+// Helper function to count words in a string
+function countWords(str: string): number {
+  if (!str) return 0;
+  return str.trim().split(/\s+/).length;
+}
+
+// Helper function to calculate keyword density
+function calculateKeywordDensity(content: string, keyword: string): number {
+  if (!content || !keyword) return 0;
+  const words = content.toLowerCase().split(/\s+/);
+  const keywordCount = words.filter(word => word === keyword.toLowerCase()).length;
+  return Number(((keywordCount / words.length) * 100).toFixed(1));
+}
+
+// Helper function to count headings in markdown
+function countHeadings(markdown: string): number {
+  if (!markdown) return 0;
+  const headingRegex = /^#{1,6}\s/gm;
+  const matches = markdown.match(headingRegex);
+  return matches ? matches.length : 0;
+}
+
+// Helper function to categorize links
+function categorizeLinks(links: string[], currentDomain: string): { internal: string[], external: string[] } {
+  if (!links || !Array.isArray(links)) return { internal: [], external: [] };
+  
+  const internal: string[] = [];
+  const external: string[] = [];
+  
+  links.forEach(link => {
+    try {
+      const url = new URL(link);
+      if (url.hostname.includes(currentDomain)) {
+        internal.push(link);
+      } else {
+        external.push(link);
+      }
+    } catch {
+      // If URL parsing fails, consider it internal
+      internal.push(link);
+    }
+  });
+  
+  return { internal, external };
+}
+
 export function PageDetailsSidebar({ page, onClose }: PageDetailsSidebarProps) {
   const { getPageState, updatePageStatus, setPageIndexing } = useSidebar();
   const pageState = page ? getPageState(page.page) : undefined;
+  const [pageData, setPageData] = useState<ScrapeResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [processedData, setProcessedData] = useState<{
+    wordCount: number;
+    keywordDensity: number;
+    headingsCount: number;
+    internalLinks: number;
+    externalLinks: number;
+  }>({
+    wordCount: 0,
+    keywordDensity: 0,
+    headingsCount: 0,
+    internalLinks: 0,
+    externalLinks: 0,
+  });
+
+  // Function to process the scraped data
+  const processScrapedData = (data: ScrapeResponse, currentUrl: string) => {
+    const domain = new URL(currentUrl).hostname.replace('www.', '');
+    const wordCount = countWords(data.content);
+    const keywordDensity = calculateKeywordDensity(data.content, page?.mainKeyword || '');
+    const headingsCount = countHeadings(data.markdown);
+    const { internal, external } = categorizeLinks(data.links || [], domain);
+
+    setProcessedData({
+      wordCount,
+      keywordDensity,
+      headingsCount,
+      internalLinks: internal.length,
+      externalLinks: external.length,
+    });
+  };
+
+  // Function to fetch page data
+  const fetchPageData = async (url: string) => {
+    setIsLoading(true);
+    try {
+      const credentials = btoa(
+        `${process.env.NEXT_PUBLIC_API_USER}:${process.env.NEXT_PUBLIC_API_PASSWORD}`
+      );
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE}/scrape/page`,
+        {
+          method: "POST",
+          headers: {
+            accept: "application/json",
+            Authorization: `Basic ${credentials}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            url: url.startsWith("http") ? url : `https://${url}`,
+            include_markdown: true,
+            include_links: true,
+            include_images: true,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch page data: ${response.status}`);
+      }
+
+      const data = await response.json() as ScrapeResponse;
+      setPageData(data);
+      processScrapedData(data, url);
+    } catch (error) {
+      console.error("Error fetching page data:", error);
+      toast.error("Failed to fetch page data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch page data when page changes
+  useEffect(() => {
+    if (page?.page) {
+      fetchPageData(page.page);
+    } else {
+      setPageData(null);
+    }
+  }, [page?.page]);
 
   const checkIndexStatus = async () => {
     if (!page?.page) return;
@@ -173,6 +318,64 @@ export function PageDetailsSidebar({ page, onClose }: PageDetailsSidebarProps) {
 
               <Separator />
 
+              {/* Performance Metrics Section */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">
+                  Performance Metrics
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Search performance and visibility data
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Card className="border-none shadow-none bg-muted/30">
+                    <CardContent className="p-3 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                        <p className="text-sm font-medium">Clicks</p>
+                      </div>
+                      <p className="text-xl font-semibold">{page.clicks}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-none shadow-none bg-muted/30">
+                    <CardContent className="p-3 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                        <p className="text-sm font-medium">Impressions</p>
+                      </div>
+                      <p className="text-xl font-semibold">
+                        {page.impressions}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-none shadow-none bg-muted/30">
+                    <CardContent className="p-3 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-amber-500"></div>
+                        <p className="text-sm font-medium">Avg. Position</p>
+                      </div>
+                      <p className="text-xl font-semibold">
+                        {Number(page.position).toFixed(1)}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-none shadow-none bg-muted/30">
+                    <CardContent className="p-3 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                        <p className="text-sm font-medium">CTR</p>
+                      </div>
+                      <p className="text-xl font-semibold">{page.ctr}%</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+              
+              <Separator />
+
               {/* Article Data Section */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium text-muted-foreground">
@@ -182,15 +385,9 @@ export function PageDetailsSidebar({ page, onClose }: PageDetailsSidebarProps) {
                   Key metrics and performance indicators
                 </p>
 
-                {/* Keyword */}
-                <div className="p-3 bg-muted/30 rounded-lg space-y-1">
-                  <p className="text-sm font-medium">Keyword</p>
-                  <p className="text-base">{page.mainKeyword}</p>
-                </div>
-
                 {/* Metrics Grid */}
                 <div className="grid grid-cols-2 gap-3">
-                  <Card className="border-none shadow-none bg-muted/30">
+                  {/* <Card className="border-none shadow-none bg-muted/30">
                     <CardContent className="p-3 space-y-1">
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full bg-green-500"></div>
@@ -198,9 +395,9 @@ export function PageDetailsSidebar({ page, onClose }: PageDetailsSidebarProps) {
                       </div>
                       <p className="text-xl font-semibold">880</p>
                     </CardContent>
-                  </Card>
+                  </Card> */}
 
-                  <Card className="border-none shadow-none bg-muted/30">
+                  {/* <Card className="border-none shadow-none bg-muted/30">
                     <CardContent className="p-3 space-y-1">
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full bg-green-500"></div>
@@ -208,7 +405,7 @@ export function PageDetailsSidebar({ page, onClose }: PageDetailsSidebarProps) {
                       </div>
                       <p className="text-xl font-semibold">0</p>
                     </CardContent>
-                  </Card>
+                  </Card> */}
 
                   <Card className="border-none shadow-none bg-muted/30">
                     <CardContent className="p-3 space-y-1">
@@ -216,7 +413,13 @@ export function PageDetailsSidebar({ page, onClose }: PageDetailsSidebarProps) {
                         <div className="h-2 w-2 rounded-full bg-green-500"></div>
                         <p className="text-sm font-medium">Word Count</p>
                       </div>
-                      <p className="text-xl font-semibold">2917</p>
+                      <p className="text-xl font-semibold">
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          processedData.wordCount.toLocaleString()
+                        )}
+                      </p>
                     </CardContent>
                   </Card>
 
@@ -226,7 +429,13 @@ export function PageDetailsSidebar({ page, onClose }: PageDetailsSidebarProps) {
                         <div className="h-2 w-2 rounded-full bg-amber-500"></div>
                         <p className="text-sm font-medium">Keyword Density</p>
                       </div>
-                      <p className="text-xl font-semibold">0.8%</p>
+                      <p className="text-xl font-semibold">
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          `${processedData.keywordDensity.toFixed(1)}%`
+                        )}
+                      </p>
                     </CardContent>
                   </Card>
 
@@ -236,7 +445,13 @@ export function PageDetailsSidebar({ page, onClose }: PageDetailsSidebarProps) {
                         <div className="h-2 w-2 rounded-full bg-green-500"></div>
                         <p className="text-sm font-medium">Headings</p>
                       </div>
-                      <p className="text-xl font-semibold">15</p>
+                      <p className="text-xl font-semibold">
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          processedData.headingsCount.toString()
+                        )}
+                      </p>
                     </CardContent>
                   </Card>
 
@@ -246,7 +461,13 @@ export function PageDetailsSidebar({ page, onClose }: PageDetailsSidebarProps) {
                         <div className="h-2 w-2 rounded-full bg-amber-500"></div>
                         <p className="text-sm font-medium">Images</p>
                       </div>
-                      <p className="text-xl font-semibold">2</p>
+                      <p className="text-xl font-semibold">
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          (pageData?.images?.length || 0).toString()
+                        )}
+                      </p>
                     </CardContent>
                   </Card>
 
@@ -256,7 +477,13 @@ export function PageDetailsSidebar({ page, onClose }: PageDetailsSidebarProps) {
                         <div className="h-2 w-2 rounded-full bg-red-500"></div>
                         <p className="text-sm font-medium">Internal Links</p>
                       </div>
-                      <p className="text-xl font-semibold">1</p>
+                      <p className="text-xl font-semibold">
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          processedData.internalLinks.toString()
+                        )}
+                      </p>
                     </CardContent>
                   </Card>
 
@@ -266,7 +493,13 @@ export function PageDetailsSidebar({ page, onClose }: PageDetailsSidebarProps) {
                         <div className="h-2 w-2 rounded-full bg-green-500"></div>
                         <p className="text-sm font-medium">External Links</p>
                       </div>
-                      <p className="text-xl font-semibold">4</p>
+                      <p className="text-xl font-semibold">
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          processedData.externalLinks.toString()
+                        )}
+                      </p>
                     </CardContent>
                   </Card>
                 </div>
@@ -435,66 +668,8 @@ export function PageDetailsSidebar({ page, onClose }: PageDetailsSidebarProps) {
 
               <Separator />
 
-              {/* Performance Metrics Section */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-muted-foreground">
-                  Performance Metrics
-                </h4>
-                <p className="text-xs text-muted-foreground">
-                  Search performance and visibility data
-                </p>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <Card className="border-none shadow-none bg-muted/30">
-                    <CardContent className="p-3 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                        <p className="text-sm font-medium">Clicks</p>
-                      </div>
-                      <p className="text-xl font-semibold">{page.clicks}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-none shadow-none bg-muted/30">
-                    <CardContent className="p-3 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                        <p className="text-sm font-medium">Impressions</p>
-                      </div>
-                      <p className="text-xl font-semibold">
-                        {page.impressions}
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-none shadow-none bg-muted/30">
-                    <CardContent className="p-3 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-amber-500"></div>
-                        <p className="text-sm font-medium">Avg. Position</p>
-                      </div>
-                      <p className="text-xl font-semibold">
-                        {Number(page.position).toFixed(1)}
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-none shadow-none bg-muted/30">
-                    <CardContent className="p-3 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                        <p className="text-sm font-medium">CTR</p>
-                      </div>
-                      <p className="text-xl font-semibold">{page.ctr}%</p>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-
-              <Separator />
-
               {/* Keywords Section */}
-              <div className="space-y-3">
+              {/* <div className="space-y-3">
                 <h4 className="text-sm font-medium text-muted-foreground">
                   Top Keywords
                 </h4>
@@ -515,7 +690,7 @@ export function PageDetailsSidebar({ page, onClose }: PageDetailsSidebarProps) {
                     </p>
                   )}
                 </div>
-              </div>
+              </div> */}
             </div>
           </ScrollArea>
         </>

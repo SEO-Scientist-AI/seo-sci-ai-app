@@ -38,6 +38,8 @@ interface EditorProps {
 
 // Custom event for content structure updates
 export const CONTENT_STRUCTURE_UPDATE_EVENT = "content-structure-update";
+// Custom event for editor content changes
+export const EDITOR_CONTENT_CHANGE_EVENT = "editor-content-change";
 
 // Interface for content metrics
 export interface ContentStructureMetrics {
@@ -263,6 +265,14 @@ const Editor = ({ pageUrl, pageContent }: EditorProps) => {
     document.dispatchEvent(event);
   };
 
+  // Function to dispatch content change event
+  const dispatchContentChangeEvent = () => {
+    const event = new CustomEvent(EDITOR_CONTENT_CHANGE_EVENT, {
+      bubbles: true
+    });
+    document.dispatchEvent(event);
+  };
+
   const debouncedUpdates = useDebouncedCallback(
     async (editor: EditorInstance) => {
       const json = editor.getJSON();
@@ -276,6 +286,7 @@ const Editor = ({ pageUrl, pageContent }: EditorProps) => {
       // Dispatch update event
       dispatchContentStructureUpdate(metrics);
       
+      // Store content in localStorage
       window.localStorage.setItem(
         "html-content",
         highlightCodeblocks(editor.getHTML())
@@ -285,9 +296,13 @@ const Editor = ({ pageUrl, pageContent }: EditorProps) => {
         "markdown",
         editor.storage.markdown.getMarkdown()
       );
+      
+      // Dispatch content change event
+      dispatchContentChangeEvent();
+      
       setSaveStatus("Saved");
     },
-    500
+    500  // 500ms debounce for UI updates
   );
 
   useEffect(() => {
@@ -323,8 +338,8 @@ const Editor = ({ pageUrl, pageContent }: EditorProps) => {
   return (
     <div className="relative w-full max-w-screen-lg">
       {pageUrl && (
-        <div className="absolute left-5 top-5 z-10 mb-5 gap-2 bg-accent px-3 py-1.5 text-sm text-muted-foreground rounded-md">
-          Editing: {pageUrl.replace(/^https?:\/\//, '')}
+        <div className="absolute left-5 top-5 z-10 mb-5 gap-2 bg-accent px-3 py-1.5 text-sm text-muted-foreground">
+          Editing: /{pageUrl.split('/').pop()}
         </div>
       )}
       <div className="flex absolute right-5 top-5 z-10 mb-5 gap-2 ">

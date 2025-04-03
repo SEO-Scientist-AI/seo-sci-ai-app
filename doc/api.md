@@ -78,6 +78,67 @@ A third-party API service used to fetch and analyze content from existing web pa
 }
 ```
 
+### Content Analysis APIs
+
+The application uses several specialized APIs for content analysis and optimization, implemented with a 5-second debounce pattern to prevent excessive API calls.
+
+#### API Call Optimization
+
+- **Debounced Execution**: All content analysis APIs are called with a 5-second debounce
+- **Parallel Execution**: APIs are called simultaneously using Promise.all for better performance
+- **Smart Caching**: Analysis results are cached to prevent duplicate calls for unchanged content
+- **Conditional Execution**: APIs only run if content or focus keyword has actually changed
+- **Rate Limiting Protection**: Safeguards prevent multiple concurrent calls to the same endpoint
+
+#### API Endpoints
+
+1. **Keyword Extraction API**
+   - **Endpoint**: `${NEXT_PUBLIC_API_BASE}/content/extract/keywords`
+   - **Method**: POST
+   - **Triggered**: After 5 seconds of user inactivity
+   - **Extracts main and related keywords from content
+   - Used in: Keywords Section of AI Writer
+
+2. **Keyword Usage Analysis API**
+   - **Endpoint**: `${NEXT_PUBLIC_API_BASE}/content/evaluate/keyword-usage`
+   - **Method**: POST
+   - **Triggered**: After keyword extraction or focus keyword change
+   - **Analyzes keyword placement and usage
+   - **Evaluates**:
+     - Title tag keyword presence
+     - Meta description keyword presence
+     - H1 keyword presence
+     - First 100 words keyword presence
+   - Contributes 30% to overall content score
+
+3. **Title & Meta Analysis API**
+   - **Endpoint**: `${NEXT_PUBLIC_API_BASE}/content/evaluate/metadata`
+   - **Method**: POST
+   - **Triggered**: In parallel with other analyses after content change
+   - **Analyzes metadata from scraped content
+   - **Evaluates**:
+     - Title length (optimal: 55-60 characters)
+     - Meta description length (optimal: 150-160 characters)
+   - Uses actual page metadata from scraping
+   - Contributes 20% to overall content score
+
+4. **Readability Analysis API**
+   - **Endpoint**: `${NEXT_PUBLIC_API_BASE}/content/evaluate/readability`
+   - **Method**: POST
+   - **Triggered**: In parallel with other analyses after content change
+   - **Evaluates content readability and engagement
+   - **Analyzes**:
+     - Paragraph structure
+     - Writing tone
+     - Passive voice usage
+     - User intent matching
+     - Emotional storytelling
+   - Contributes 50% to overall content score
+
+### Content Score Calculation
+
+The content score is calculated based on real-time analysis data from multiple APIs. To optimize performance, the calculation runs client-side after all analyses complete.
+
 ## Internal API Endpoints
 
 ### Authentication
