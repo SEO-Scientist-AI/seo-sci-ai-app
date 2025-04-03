@@ -40,11 +40,15 @@ The SEO Scientist application has been developed with the following tech stack:
 ### AI Writer Tool
 
 - Rich text editor using Novel.js with markdown support
+- Smart debounced content analysis system (5-second delay)
+- Parallel API execution for efficient resource usage
+- Event-based architecture for content change detection
 - Real-time content analysis and scoring system:
   - Keyword Usage Analysis (30%)
   - Title & Meta Analysis (20%)
   - Readability Analysis (50%)
 - Dynamic content score calculation using real data
+- Focus keyword selection via dropdown menu
 - Content scraping with metadata extraction
 - Loading states and progress indicators
 - Auto-optimization suggestions
@@ -53,12 +57,25 @@ The SEO Scientist application has been developed with the following tech stack:
 
 ### Content Analysis System
 
-- Real-time analysis using multiple specialized APIs
+- Debounced analysis to prevent excessive API calls
+- Real-time analysis using multiple specialized APIs in parallel
 - Weighted scoring system based on industry best practices
 - Integration with content scraping for metadata analysis
 - Progress tracking and visual feedback
 - Error handling and graceful degradation
 - Loading states and skeleton UI
+- Prevention of duplicate API calls during rapid edits
+
+### Performance Optimizations
+
+- Debounced editor updates (500ms) for smooth UI experience
+- Debounced API calls (5s) for cost-effective analysis
+- Event-based system to reduce polling overhead
+- Parallel API execution to minimize total analysis time
+- Smart caching of analysis results
+- Reference-based tracking of in-progress analyses
+- Cleanup of event listeners to prevent memory leaks
+- Conditional rendering to reduce unnecessary updates
 
 ### Database Schema
 

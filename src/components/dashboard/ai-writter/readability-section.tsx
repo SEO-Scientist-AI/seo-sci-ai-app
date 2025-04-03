@@ -19,13 +19,21 @@ interface ReadabilityAnalysis {
 }
 
 interface ReadabilitySectionProps {
-  analysis?: ReadabilityAnalysis
+  analysis?: {
+    has_short_paragraphs: boolean
+    uses_conversational_tone: boolean
+    passive_voice_under_10_percent: boolean
+    matches_user_intent: boolean
+    uses_emotion_and_storytelling: boolean
+  }
   isLoading?: boolean
+  keyword?: string
 }
 
 export function ReadabilitySection({
   analysis,
-  isLoading = false
+  isLoading = false,
+  keyword
 }: ReadabilitySectionProps) {
   const [isOpen, setIsOpen] = useState(true)
 

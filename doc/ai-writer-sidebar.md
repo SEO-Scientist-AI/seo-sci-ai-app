@@ -1,7 +1,28 @@
 # AI Writer Sidebar Documentation
 
 ## Overview
-The AI Writer sidebar provides real-time content analysis and optimization suggestions through multiple specialized sections. Each section evaluates different aspects of the content and contributes to an overall content score based on real data from API integrations.
+The AI Writer sidebar provides real-time content analysis and optimization suggestions through multiple specialized sections. Each section evaluates different aspects of the content and contributes to an overall content score based on real data from API integrations. The analysis is triggered after a 5-second debounce to optimize API usage.
+
+## Performance Optimization
+
+### Debounced Content Analysis
+- Content analysis only triggers after 5 seconds of user inactivity
+- Prevents excessive API calls during continuous typing
+- All analyses run in parallel for optimal performance
+- Event-based architecture for minimal performance impact
+- Guards against concurrent analyses to prevent duplicate API calls
+
+### Event System
+- `EDITOR_CONTENT_CHANGE_EVENT` - Fires when editor content changes (500ms debounce)
+- `CONTENT_STRUCTURE_UPDATE_EVENT` - Fires when content structure metrics update
+- Event listeners clean up properly to prevent memory leaks
+
+### API Efficiency
+- All analysis APIs (keywords, usage, readability, title/meta) run in parallel
+- Analysis only runs when content actually changes
+- Caching implemented for frequently used data
+- Proper error handling with graceful degradation
+- Reuses keyword data across analyses when possible
 
 ## Components Structure
 
@@ -79,6 +100,31 @@ Located at: `src/components/dashboard/ai-writter/readability-section.tsx`
 - Detailed tooltips for each criterion
 - Loading state during analysis
 
+## Data Flow
+
+1. **Content Change Detection**
+   - User edits content in the editor
+   - Editor component saves to localStorage (500ms debounce)
+   - Editor fires `EDITOR_CONTENT_CHANGE_EVENT`
+   - AI Writer page detects change and updates editorContent state
+
+2. **Debounced Analysis**
+   - After 5 seconds of inactivity, runContentAnalysis executes
+   - Analysis only runs if not already in progress (tracked via ref)
+   - Keyword extraction runs first
+   - Main keyword is selected if none is currently selected
+   - Three analyses run in parallel:
+     - Keyword usage analysis
+     - Title & meta analysis (using scraped metadata)
+     - Readability analysis
+   - Results update UI state when all analyses complete
+
+3. **UI Updates**
+   - Loading states show during analysis
+   - Sections update as results become available
+   - Content score recalculates based on new analysis data
+   - Focus keyword can be manually changed to recalculate relevant analyses
+
 ## Data Integration
 
 ### Content Score Calculation
@@ -114,9 +160,10 @@ Located at: `src/components/dashboard/ai-writter/readability-section.tsx`
 ## Best Practices
 
 1. **Performance**
-   - Efficient state management
-   - Optimized re-renders
-   - Smart loading states
+   - Efficient state management with React hooks
+   - Optimized re-renders with appropriate dependencies
+   - Smart loading states to prevent skeleton flicker
+   - Properly debounced API calls and UI updates
 
 2. **Error Handling**
    - Graceful handling of missing data

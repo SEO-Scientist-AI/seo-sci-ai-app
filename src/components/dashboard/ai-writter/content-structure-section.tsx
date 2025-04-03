@@ -15,7 +15,7 @@ export function ContentStructureSection({ metrics, onRefresh }: ContentStructure
     <div>
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-sm font-medium text-muted-foreground">Content Structure</h4>
-        {/* <TooltipProvider>
+        <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
@@ -32,7 +32,7 @@ export function ContentStructureSection({ metrics, onRefresh }: ContentStructure
               <p>Refresh content structure metrics</p>
             </TooltipContent>
           </Tooltip>
-        </TooltipProvider> */}
+        </TooltipProvider>
       </div>
 
       <div className="grid grid-cols-4 divide-x divide-border">

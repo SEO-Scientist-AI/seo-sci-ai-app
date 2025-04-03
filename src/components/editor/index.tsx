@@ -38,6 +38,8 @@ interface EditorProps {
 
 // Custom event for content structure updates
 export const CONTENT_STRUCTURE_UPDATE_EVENT = "content-structure-update";
+// Custom event for editor content changes
+export const EDITOR_CONTENT_CHANGE_EVENT = "editor-content-change";
 
 // Interface for content metrics
 export interface ContentStructureMetrics {
@@ -263,6 +265,14 @@ const Editor = ({ pageUrl, pageContent }: EditorProps) => {
     document.dispatchEvent(event);
   };
 
+  // Function to dispatch content change event
+  const dispatchContentChangeEvent = () => {
+    const event = new CustomEvent(EDITOR_CONTENT_CHANGE_EVENT, {
+      bubbles: true
+    });
+    document.dispatchEvent(event);
+  };
+
   const debouncedUpdates = useDebouncedCallback(
     async (editor: EditorInstance) => {
       const json = editor.getJSON();
@@ -276,6 +286,7 @@ const Editor = ({ pageUrl, pageContent }: EditorProps) => {
       // Dispatch update event
       dispatchContentStructureUpdate(metrics);
       
+      // Store content in localStorage
       window.localStorage.setItem(
         "html-content",
         highlightCodeblocks(editor.getHTML())
@@ -285,9 +296,13 @@ const Editor = ({ pageUrl, pageContent }: EditorProps) => {
         "markdown",
         editor.storage.markdown.getMarkdown()
       );
+      
+      // Dispatch content change event
+      dispatchContentChangeEvent();
+      
       setSaveStatus("Saved");
     },
-    500
+    500  // 500ms debounce for UI updates
   );
 
   useEffect(() => {

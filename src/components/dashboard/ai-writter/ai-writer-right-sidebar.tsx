@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { CONTENT_STRUCTURE_UPDATE_EVENT, ContentStructureMetrics } from "@/components/editor"
+import { Button } from "@/components/ui/button"
+import { X } from "lucide-react"
 
 // Import section components
 import { ContentScoreSection } from "./content-score-section"
@@ -15,24 +17,16 @@ import { ContentStructureSection } from "./content-structure-section"
 
 interface SearchAnalyticsPage {
   page: string
-  clicks: number
-  impressions: number
-  ctr: number
-  position: number
-  contentScore: number
-  keywords?: string[]
-  mainKeyword?: string
-  isLoadingKeywords?: boolean
-  keywordUsageAnalysis?: any
-  isAnalyzingKeywordUsage?: boolean
-  titleMetaAnalysis?: any
-  isAnalyzingTitleMeta?: boolean
-  readabilityAnalysis?: any
-  isAnalyzingReadability?: boolean
-  wordCount?: number
-  headingCount?: number
-  paragraphCount?: number
-  imageCount?: number
+  mainKeyword: string
+  keywords: string[]
+  isLoadingKeywords: boolean
+  keywordUsageAnalysis: any
+  isAnalyzingKeywordUsage: boolean
+  titleMetaAnalysis: any
+  isAnalyzingTitleMeta: boolean
+  readabilityAnalysis: any
+  isAnalyzingReadability: boolean
+  onKeywordSelect: (keyword: string) => void
 }
 
 interface IndexingStatus {
@@ -102,7 +96,7 @@ const requestIndexing = async (url: string) => {
   }
 }
 
-interface PageDetailsSidebarProps {
+interface RightSidebarProps {
   page: SearchAnalyticsPage | null
   onClose: () => void
   open: boolean
@@ -111,16 +105,16 @@ interface PageDetailsSidebarProps {
 // Add dummy data for the example
 const dummyPage: SearchAnalyticsPage = {
   page: "https://example.com/blog/how-to-optimize-content",
-  clicks: 0,
-  impressions: 0,
-  ctr: 0,
-  position: 0,
-  contentScore: 0,
+  mainKeyword: "content marketing",
   keywords: ["content marketing", "SEO", "optimization", "content strategy", "marketing metrics"],
-  wordCount: 0,
-  headingCount: 0,
-  paragraphCount: 0,
-  imageCount: 0,
+  isLoadingKeywords: false,
+  keywordUsageAnalysis: {},
+  isAnalyzingKeywordUsage: false,
+  titleMetaAnalysis: {},
+  isAnalyzingTitleMeta: false,
+  readabilityAnalysis: {},
+  isAnalyzingReadability: false,
+  onKeywordSelect: () => {}
 }
 
 // Navigation Tabs Component
@@ -136,11 +130,8 @@ function NavigationTabs() {
   )
 }
 
-export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSidebarProps) {
-  // Use dummy data if no page is provided
-  const page = propPage || dummyPage
-  
-  // Add state for content metrics - initialize with zeros instead of hardcoded values
+export function RightSidebar({ page, onClose, open }: RightSidebarProps) {
+  // Add state for content metrics
   const [contentMetrics, setContentMetrics] = useState<ContentStructureMetrics>({
     wordCount: 0,
     headingCount: 0,
@@ -148,9 +139,6 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
     imageCount: 0
   })
 
-  const { getPageState, updatePageStatus, setPageIndexing } = useSidebar()
-  const pageState = page ? getPageState(page.page) : undefined
-  
   // Load initial metrics from stored content if available
   useEffect(() => {
     // Attempt to calculate initial metrics from stored content
@@ -189,10 +177,6 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
           paragraphCount: paragraphCount,
           imageCount: imageCount
         });
-        
-        console.log("Loaded initial content metrics:", {
-          wordCount, headingCount, paragraphCount, imageCount
-        });
       } catch (e) {
         console.error("Failed to calculate initial metrics:", e);
       }
@@ -202,7 +186,6 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
   // Listen for content structure updates
   useEffect(() => {
     const handleContentStructureUpdate = (event: CustomEvent<ContentStructureMetrics>) => {
-      console.log("Content structure updated:", event.detail);
       setContentMetrics(event.detail);
     }
     
@@ -220,52 +203,6 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
       )
     }
   }, [])
-
-  const checkIndexStatus = async () => {
-    if (!page?.page) return
-
-    setPageIndexing(page.page, true)
-    try {
-      const status = await checkIndexingStatus(page.page)
-      updatePageStatus(page.page, status)
-    } catch (error) {
-      toast.error("Failed to check indexing status")
-    } finally {
-      setPageIndexing(page.page, false)
-    }
-  }
-
-  const handleRequestIndex = async () => {
-    if (!page?.page) return
-
-    setPageIndexing(page.page, true)
-    try {
-      const result = await requestIndexing(page.page)
-      if (result.success) {
-        toast.success(result.message, { duration: 5000 })
-        // Recheck status after requesting indexing
-        await checkIndexStatus()
-      } else {
-        toast.error("Request failed", {
-          description: "Unable to request indexing at this time",
-          duration: 10000,
-        })
-      }
-    } catch (error) {
-      toast.error("Failed to request indexing")
-    } finally {
-      setPageIndexing(page.page, false)
-    }
-  }
-
-  useEffect(() => {
-    if (!page?.page) return
-
-    const state = getPageState(page.page)
-    if (!state?.indexStatus || Date.now() - (state.lastChecked || 0) > 5 * 60 * 1000) {
-      checkIndexStatus()
-    }
-  }, [page?.page])
 
   const handleRefreshContentStructure = () => {
     // Manually trigger a content analysis of what's currently in the editor
@@ -309,10 +246,6 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
       };
       
       setContentMetrics(updatedMetrics);
-      
-      // Log the metrics for debugging
-      console.log("Refreshed content structure metrics:", updatedMetrics);
-      
       toast.success("Content structure metrics refreshed");
     } catch (error) {
       console.error("Failed to refresh content metrics:", error);
@@ -321,55 +254,61 @@ export function RightSidebar({ page: propPage, onClose, open }: PageDetailsSideb
   };
 
   return (
-    <div
-      className={cn(
-        "fixed top-16 right-0 w-96 h-[calc(100vh-4rem)] bg-background border-l shadow-lg transform transition-transform duration-200 ease-in-out",
-        open ? "translate-x-0" : "translate-x-full"
-      )}
-    >
-      {page && (
-        <>
-          <NavigationTabs />
+    <div className={cn(
+      "fixed top-0 right-0 z-40 h-screen w-96 bg-background border-l",
+      "overflow-y-auto scrollbar-hide"
+    )}>
+      <div className="sticky top-0 z-40 flex items-center justify-between px-4 h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <span className="text-sm font-medium">Page Analysis</span>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close sidebar</span>
+        </Button>
+      </div>
+      
+      <div className="px-4 py-6 space-y-6">
+        <ContentScoreSection
+          keywordUsageAnalysis={page?.keywordUsageAnalysis}
+          titleMetaAnalysis={page?.titleMetaAnalysis}
+          readabilityAnalysis={page?.readabilityAnalysis}
+          isLoading={
+            page?.isAnalyzingKeywordUsage || 
+            page?.isAnalyzingTitleMeta || 
+            page?.isAnalyzingReadability
+          }
+        />
 
-          <ScrollArea className="h-[calc(100vh-4rem-3rem)]">
-            <div className="p-4 space-y-6">
-              <ContentScoreSection 
-                keywordUsageAnalysis={page.keywordUsageAnalysis}
-                titleMetaAnalysis={page.titleMetaAnalysis}
-                readabilityAnalysis={page.readabilityAnalysis}
-                isLoading={page.isAnalyzingKeywordUsage || page.isAnalyzingTitleMeta || page.isAnalyzingReadability}
-              />
-              
-              <ContentStructureSection 
-                metrics={contentMetrics}
-                onRefresh={handleRefreshContentStructure}
-              />
+        <ContentStructureSection 
+          metrics={contentMetrics}
+          onRefresh={handleRefreshContentStructure}
+        />
 
-              <KeywordsSection 
-                keywords={page.keywords}
-                mainKeyword={page.mainKeyword}
-                isLoading={page.isLoadingKeywords}
-              />
-              
-              <KeywordUsageSection 
-                analysis={page.keywordUsageAnalysis}
-                isLoading={page.isAnalyzingKeywordUsage}
-                mainKeyword={page.mainKeyword}
-              />
+        <KeywordsSection 
+          keywords={page?.keywords}
+          mainKeyword={page?.mainKeyword}
+          isLoading={page?.isLoadingKeywords}
+          onKeywordSelect={page?.onKeywordSelect}
+        />
 
-              <TitleMetaSection 
-                analysis={page.titleMetaAnalysis}
-                isLoading={page.isAnalyzingTitleMeta}
-              />
+        
 
-              <ReadabilitySection 
-                analysis={page.readabilityAnalysis}
-                isLoading={page.isAnalyzingReadability}
-              />
-            </div>
-          </ScrollArea>
-        </>
-      )}
+        <KeywordUsageSection 
+          analysis={page?.keywordUsageAnalysis}
+          isLoading={page?.isAnalyzingKeywordUsage}
+          keyword={page?.mainKeyword}
+        />
+
+        <TitleMetaSection 
+          analysis={page?.titleMetaAnalysis}
+          isLoading={page?.isAnalyzingTitleMeta}
+        />
+
+        <ReadabilitySection 
+          analysis={page?.readabilityAnalysis}
+          isLoading={page?.isAnalyzingReadability}
+          keyword={page?.mainKeyword}
+        />
+      </div>
     </div>
   )
 }

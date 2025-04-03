@@ -9,20 +9,59 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { useState } from "react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { useState, useEffect } from "react"
 
 interface KeywordsSectionProps { 
   keywords?: string[]
   mainKeyword?: string
-  isLoading?: boolean 
+  isLoading?: boolean
+  onKeywordSelect?: (keyword: string) => void
 }
 
 export function KeywordsSection({ 
   keywords = [], 
   mainKeyword = "",
-  isLoading = false 
+  isLoading = false,
+  onKeywordSelect
 }: KeywordsSectionProps) {
   const [isOpen, setIsOpen] = useState(true)
+  const [selectedKeyword, setSelectedKeyword] = useState(mainKeyword)
+
+  // Update selected keyword when mainKeyword changes
+  useEffect(() => {
+    if (mainKeyword && mainKeyword !== selectedKeyword) {
+      setSelectedKeyword(mainKeyword)
+      // Trigger analysis for main keyword if it's different
+      if (onKeywordSelect) {
+        onKeywordSelect(mainKeyword)
+      }
+    }
+  }, [mainKeyword, selectedKeyword, onKeywordSelect])
+
+  // Set initial keyword when keywords are loaded
+  useEffect(() => {
+    if (keywords?.length && !selectedKeyword && !mainKeyword) {
+      const initialKeyword = keywords[0]
+      setSelectedKeyword(initialKeyword)
+      if (onKeywordSelect) {
+        onKeywordSelect(initialKeyword)
+      }
+    }
+  }, [keywords, selectedKeyword, mainKeyword, onKeywordSelect])
+
+  const handleKeywordSelect = (value: string) => {
+    setSelectedKeyword(value)
+    if (onKeywordSelect) {
+      onKeywordSelect(value)
+    }
+  }
 
   return (
     <Collapsible
@@ -48,23 +87,34 @@ export function KeywordsSection({
           </div>
         ) : keywords && keywords.length > 0 ? (
           <div className="space-y-3">
-            {mainKeyword && (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">MAIN KEYWORD</p>
-                <div className="bg-primary/10 text-primary rounded-md px-3 py-2 font-medium">
-                  {mainKeyword}
-                </div>
-              </div>
-            )}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">FOCUS KEYWORD</p>
+              <Select value={selectedKeyword} onValueChange={handleKeywordSelect}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a focus keyword" />
+                </SelectTrigger>
+                <SelectContent>
+                  {keywords.map((keyword, index) => (
+                    <SelectItem key={index} value={keyword}>
+                      {keyword}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2">RELATED KEYWORDS</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">ALL KEYWORDS</p>
               <div className="flex flex-wrap gap-2">
-                {keywords.slice(mainKeyword ? 1 : 0).map((keyword, index) => (
+                {keywords.map((keyword, index) => (
                   <Badge 
                     key={index} 
-                    variant="outline" 
-                    className="bg-muted text-muted-foreground hover:bg-muted/80 cursor-pointer"
+                    variant={keyword === selectedKeyword ? "default" : "outline"}
+                    className={`${
+                      keyword === selectedKeyword 
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    } cursor-pointer`}
                     onClick={() => {
                       navigator.clipboard.writeText(keyword)
                       toast.success(`Copied "${keyword}" to clipboard`)

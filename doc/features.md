@@ -94,11 +94,13 @@ A performance analysis tool that shows SEO metrics for pages from the selected w
 ## AI Writer Tool
 
 ### Feature Description
-A comprehensive content creation and optimization tool with real-time AI-powered analysis and scoring.
+A comprehensive content creation and optimization tool with real-time AI-powered analysis and scoring. Features a 5-second debounced analysis system for efficient API usage.
 
 ### Expected Behavior
 - Rich text editor for content creation and editing using Novel.js
 - Content import from URLs via scraping API
+- Debounced content analysis with 5-second delay after user stops typing
+- Parallel API execution for faster analysis completion
 - Real-time content analysis with three main components:
   1. Keyword Usage Analysis (30% of score)
      - Title tag keyword presence
@@ -115,6 +117,8 @@ A comprehensive content creation and optimization tool with real-time AI-powered
      - User intent matching
      - Emotional appeal
 - Dynamic content score calculation based on real analysis data
+- Selection of focus keyword via dropdown
+- Event-based content change detection system
 - Loading states and progress indicators for all analyses
 - Copy-to-clipboard functionality for keywords
 - Auto-optimization suggestions
@@ -127,11 +131,13 @@ A comprehensive content creation and optimization tool with real-time AI-powered
 - Proper state management during concurrent analyses
 - Handling metadata extraction failures
 - Recovery from API timeouts or failures
+- Prevention of duplicate API calls during rapid content changes
 
 ### Dependencies
 - Novel.js editor
 - Content scraping API integration
 - Real-time analysis APIs
+- use-debounce for optimized API calls
 - CircularProgress component for score visualization
 - Skeleton loading components
 - Toast notifications for user feedback
