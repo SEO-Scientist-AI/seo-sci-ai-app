@@ -14,6 +14,8 @@ import { KeywordUsageSection } from "./keyword-usage-section"
 import { TitleMetaSection } from "./title-meta-section"
 import { ReadabilitySection } from "./readability-section"
 import { ContentStructureSection } from "./content-structure-section"
+import { AiWriterToolbar } from "./ai-writer-toolbar"
+import { AdvancedContentToolsSection } from "./advanced-content-tools-section"
 
 interface SearchAnalyticsPage {
   page: string
@@ -122,9 +124,8 @@ function NavigationTabs() {
   return (
     <div className="border-b border-border">
       <div className="flex">
-        <button className="px-6 py-3 text-primary border-b-2 border-primary font-medium">GUIDELINES</button>
-        <button className="px-6 py-3 text-muted-foreground hover:text-foreground">OUTLINE</button>
-        <button className="px-6 py-3 text-muted-foreground hover:text-foreground">BRIEF</button>
+        <button className="px-6 py-3 text-primary border-b-2 border-primary font-medium">PERFORMANCE</button>
+        <button className="px-6 py-3 text-muted-foreground hover:text-foreground">COMPETITON </button>
       </div>
     </div>
   )
@@ -138,7 +139,7 @@ export function RightSidebar({ page, onClose, open }: RightSidebarProps) {
     paragraphCount: 0,
     imageCount: 0
   })
-
+  
   // Load initial metrics from stored content if available
   useEffect(() => {
     // Attempt to calculate initial metrics from stored content
@@ -205,52 +206,78 @@ export function RightSidebar({ page, onClose, open }: RightSidebarProps) {
   }, [])
 
   const handleRefreshContentStructure = () => {
-    // Manually trigger a content analysis of what's currently in the editor
-    const content = window.localStorage.getItem("novel-content");
-    const markdown = window.localStorage.getItem("markdown");
-    
-    if (!content || !markdown) {
-      toast.error("No content to analyze");
-      return;
+                            // Manually trigger a content analysis of what's currently in the editor
+                            const content = window.localStorage.getItem("novel-content");
+                            const markdown = window.localStorage.getItem("markdown");
+                            
+                            if (!content || !markdown) {
+                              toast.error("No content to analyze");
+                              return;
+                            }
+                            
+                            try {
+                              // Get accurate word count from markdown
+                              const wordCount = markdown.split(/\s+/).filter(Boolean).length;
+                              
+                              // Parse the editor's content JSON
+                              const json = JSON.parse(content);
+                              let headingCount = 0;
+                              let paragraphCount = 0;
+                              let imageCount = 0;
+                              
+                              // Recursive function to count content elements
+                              const countNodes = (nodes: any[]) => {
+                                if (!nodes) return;
+                                for (const node of nodes) {
+                                  if (node.type === 'heading') headingCount++;
+                                  if (node.type === 'paragraph') paragraphCount++;
+                                  if (node.type === 'image') imageCount++;
+                                  if (node.content) countNodes(node.content);
+                                }
+                              };
+                              
+                              if (json.content) countNodes(json.content);
+                              
+                              // Update metrics with real values
+                              const updatedMetrics = {
+                                wordCount,
+                                headingCount,
+                                paragraphCount,
+                                imageCount
+                              };
+                              
+                              setContentMetrics(updatedMetrics);
+                              toast.success("Content structure metrics refreshed");
+                            } catch (error) {
+                              console.error("Failed to refresh content metrics:", error);
+                              toast.error("Failed to refresh content metrics");
+                            }
+  };
+
+  const handlePreview = () => {
+    toast.info("Preview functionality coming soon");
+  };
+
+  const handleShare = () => {
+    toast.info("Share functionality coming soon");
+  };
+
+  const handleCopy = () => {
+    const content = window.localStorage.getItem("markdown");
+    if (content) {
+      navigator.clipboard.writeText(content);
+      toast.success("Content copied to clipboard");
+    } else {
+      toast.error("No content to copy");
     }
-    
-    try {
-      // Get accurate word count from markdown
-      const wordCount = markdown.split(/\s+/).filter(Boolean).length;
-      
-      // Parse the editor's content JSON
-      const json = JSON.parse(content);
-      let headingCount = 0;
-      let paragraphCount = 0;
-      let imageCount = 0;
-      
-      // Recursive function to count content elements
-      const countNodes = (nodes: any[]) => {
-        if (!nodes) return;
-        for (const node of nodes) {
-          if (node.type === 'heading') headingCount++;
-          if (node.type === 'paragraph') paragraphCount++;
-          if (node.type === 'image') imageCount++;
-          if (node.content) countNodes(node.content);
-        }
-      };
-      
-      if (json.content) countNodes(json.content);
-      
-      // Update metrics with real values
-      const updatedMetrics = {
-        wordCount,
-        headingCount,
-        paragraphCount,
-        imageCount
-      };
-      
-      setContentMetrics(updatedMetrics);
-      toast.success("Content structure metrics refreshed");
-    } catch (error) {
-      console.error("Failed to refresh content metrics:", error);
-      toast.error("Failed to refresh content metrics");
-    }
+  };
+
+  const handleExport = () => {
+    toast.info("Export functionality coming soon");
+  };
+
+  const handleIntegrations = () => {
+    toast.info("Integrations functionality coming soon");
   };
 
   return (
@@ -265,8 +292,18 @@ export function RightSidebar({ page, onClose, open }: RightSidebarProps) {
           <span className="sr-only">Close sidebar</span>
         </Button>
       </div>
-      
+
       <div className="px-4 py-6 space-y-6">
+        <AiWriterToolbar 
+          onPreview={handlePreview}
+          onShare={handleShare}
+          onCopy={handleCopy}
+          onExport={handleExport}
+          onIntegrations={handleIntegrations}
+        />
+        
+        <NavigationTabs />
+
         <ContentScoreSection
           keywordUsageAnalysis={page?.keywordUsageAnalysis}
           titleMetaAnalysis={page?.titleMetaAnalysis}
@@ -290,7 +327,7 @@ export function RightSidebar({ page, onClose, open }: RightSidebarProps) {
           onKeywordSelect={page?.onKeywordSelect}
         />
 
-        
+        <AdvancedContentToolsSection />
 
         <KeywordUsageSection 
           analysis={page?.keywordUsageAnalysis}

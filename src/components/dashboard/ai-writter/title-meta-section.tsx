@@ -27,7 +27,7 @@ export function TitleMetaSection({
   analysis,
   isLoading = false
 }: TitleMetaSectionProps) {
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
 
   const checklistItems = [
     {

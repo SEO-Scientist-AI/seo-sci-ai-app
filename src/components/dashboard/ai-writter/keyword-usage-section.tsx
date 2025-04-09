@@ -27,7 +27,7 @@ export function KeywordUsageSection({
   isLoading = false,
   keyword = ""
 }: KeywordUsageSectionProps) {
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
 
   const checklistItems = useMemo(() => [
     {
