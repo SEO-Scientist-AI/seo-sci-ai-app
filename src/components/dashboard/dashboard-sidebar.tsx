@@ -17,6 +17,8 @@ import {
   Wrench,
   ExternalLink,
   Upload,
+  BarChart,
+  BarChart2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState } from "react";
@@ -76,6 +78,11 @@ export function DashboardSidebar({ currentWebsite }: SidebarProps) {
       href: "/content-planner",
     },
     {
+      icon: BarChart2,
+      label: "SEO Audit",
+      href: "/seo-audit",
+    },
+    {
       icon: Globe,
       label: "Page Audit",
       href: "/page-audit",
@@ -100,11 +107,7 @@ export function DashboardSidebar({ currentWebsite }: SidebarProps) {
       label: "Backlinks",
       href: "/backlinks",
     },
-    {
-      icon: Upload,
-      label: "Instant Indexing",
-      href: "/instant-indexing",
-    },
+    
     {
       icon: RefreshCcw,
       label: "History",

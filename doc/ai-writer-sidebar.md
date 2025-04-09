@@ -79,7 +79,30 @@ Located at: `src/components/dashboard/ai-writter/keywords-section.tsx`
 - Empty state handling
 - Refresh capability
 
-### 3. Title & Meta Section
+### 3. Advanced Content Tools Section
+Located at: `src/components/dashboard/ai-writter/advanced-content-tools-section.tsx`
+
+#### Features
+- Collapsible section with toggle functionality
+- Organized into four tool categories:
+  - Content Enhancement (AI Detector, Humanizer)
+  - Style & Tone (Tone Switcher, Plagiarism)
+  - Conversion Tools (CTA Generator, AI Outline)
+  - SEO Optimization (Gap Analyzer, SERP Preview, Meta Generator, Multilingual)
+- Each tool has a descriptive icon, name, and brief description
+- Badges indicating tool status (Premium, Popular, New, Essential, Free)
+- Responsive grid layout that adapts to different screen sizes
+- Theme-aware styling that works in both light and dark modes
+- "View all 24 tools" button for accessing additional tools
+
+#### Implementation Details
+- Uses the Collapsible component from the UI library
+- Implements responsive design with grid layout
+- Uses theme-aware colors with dark mode support
+- Maintains consistent spacing and alignment
+- Provides visual feedback with hover states
+
+### 4. Title & Meta Section
 Located at: `src/components/dashboard/ai-writter/title-meta-section.tsx`
 
 #### Features
@@ -90,7 +113,7 @@ Located at: `src/components/dashboard/ai-writter/title-meta-section.tsx`
 - Uses actual metadata from page scraping
 - Loading states during analysis
 
-### 4. Readability Section
+### 5. Readability Section
 Located at: `src/components/dashboard/ai-writter/readability-section.tsx`
 
 #### Features
@@ -151,6 +174,8 @@ Located at: `src/components/dashboard/ai-writter/readability-section.tsx`
    - Removed redundant score breakdown text
    - Enhanced button states based on data availability
    - Improved error handling and user feedback
+   - Added Advanced Content Tools section with responsive design
+   - Implemented theme-aware styling for all components
 
 3. **Data Integration**
    - Connected to real APIs for all analyses
@@ -174,6 +199,8 @@ Located at: `src/components/dashboard/ai-writter/readability-section.tsx`
    - Consistent loading states
    - Clear progress indicators
    - Intuitive interactions
+   - Responsive design for all screen sizes
+   - Theme-aware styling for light and dark modes
 
 ## Future Improvements
 
@@ -191,3 +218,4 @@ Located at: `src/components/dashboard/ai-writter/readability-section.tsx`
    - Deeper integration with content editor
    - Real-time content analysis
    - Automated improvement suggestions
+   - Expanded Advanced Content Tools functionality
