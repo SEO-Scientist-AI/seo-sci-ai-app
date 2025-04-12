@@ -34,6 +34,8 @@ import {
 } from "lucide-react"
 import { ProgressTab } from "@/components/dashboard/seo-audit/tabs/progress-tab"
 
+export const runtime = "edge";
+
 export default function SeoAuditPage() {
   const [activeTab, setActiveTab] = useState("overview")
   const { currentWebsite, isLoading } = useWebsite()
