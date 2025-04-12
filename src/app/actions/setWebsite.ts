@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 
 // No default website anymore
 // const DEFAULT_WEBSITE = 'agencyspot.seoscientist.ai'
@@ -17,47 +18,49 @@ function cleanWebsiteUrl(url: string): string {
  * Server action to set the current website and redirect
  */
 export async function setWebsite(website: string) {
-  // Clean up the URL
-  const cleanUrl = cleanWebsiteUrl(website)
+  // Add timestamp to force a complete page refresh
+  const timestamp = Date.now()
+  
+  // Set cookie for server-side access
+  cookies().set('current_website', website, {
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+  })
   
   // Redirect to the same page with the website parameter
-  // This creates a URL parameter that will persist as users navigate
-  // Add a timestamp to force a complete page refresh
-  const timestamp = Date.now();
-  redirect(`?website=${encodeURIComponent(cleanUrl)}&t=${timestamp}`);
+  redirect(`?website=${encodeURIComponent(website)}&t=${timestamp}`)
 }
 
 /**
- * Get the current website from URL parameters only
- * Client-side code will handle localStorage persistence
+ * Get the current website from URL parameters or cookies
  */
-export async function getCurrentWebsite(urlParams?: URLSearchParams): Promise<string | null> {
-  // If no URL parameters provided, return null - client-side will check localStorage
-  if (!urlParams) {
-    console.log("No URL parameters provided, client will check localStorage");
-    return null;
-  }
-  
-  // Check 'website' parameter
-  if (urlParams.has('website')) {
-    const websiteFromUrl = urlParams.get('website')
-    console.log("Found 'website' parameter:", websiteFromUrl);
+export async function getCurrentWebsite(urlParams?: URLSearchParams | { [key: string]: string }): Promise<string | null> {
+  // Check URL parameters first
+  if (urlParams) {
+    // Handle both URLSearchParams and plain objects
+    const getParam = (key: string) => {
+      if (urlParams instanceof URLSearchParams) {
+        return urlParams.get(key)
+      }
+      return urlParams[key] || null
+    }
+
+    // Check 'website' parameter
+    const websiteFromUrl = getParam('website')
     if (websiteFromUrl) {
-      return websiteFromUrl;
+      return websiteFromUrl
     }
-  }
-  
-  // Check 'site' parameter (support for existing URLs)
-  if (urlParams.has('site')) {
-    const siteFromUrl = urlParams.get('site')
-    console.log("Found 'site' parameter:", siteFromUrl);
+
+    // Check 'site' parameter (support for existing URLs)
+    const siteFromUrl = getParam('site')
     if (siteFromUrl) {
-      // Clean the URL
-      const cleanUrl = cleanWebsiteUrl(siteFromUrl);
-      return cleanUrl;
+      return siteFromUrl
     }
   }
-  
-  console.log("No website found in URL parameters");
-  return null; // Return null if no website is selected in the URL
+
+  // Fallback to cookie
+  const websiteFromCookie = cookies().get('current_website')
+  return websiteFromCookie?.value || null
 } 

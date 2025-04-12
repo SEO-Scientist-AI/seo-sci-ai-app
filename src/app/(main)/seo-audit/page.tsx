@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
-import { getCurrentWebsite } from "@/app/actions/setWebsite"
+import { useWebsite } from "@/hooks/use-website"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,6 +14,8 @@ import { KeywordsTab } from "@/components/dashboard/seo-audit/tabs/keywords-tab"
 import { ContentTab } from "@/components/dashboard/seo-audit/tabs/content-tab"
 import { PerformanceTab } from "@/components/dashboard/seo-audit/tabs/performance-tab"
 import { RecommendationsTab } from "@/components/dashboard/seo-audit/tabs/recommendations-tab"
+import { CrawledPagesTab } from "@/components/dashboard/seo-audit/tabs/crawled-pages-tab"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   RefreshCw,
   Eye,
@@ -28,22 +29,14 @@ import {
   Tag,
   Clock,
   MoreHorizontal,
+  AlertCircle,
+  Loader2
 } from "lucide-react"
-
-export const runtime = "edge";
+import { ProgressTab } from "@/components/dashboard/seo-audit/tabs/progress-tab"
 
 export default function SeoAuditPage() {
   const [activeTab, setActiveTab] = useState("overview")
-  const [currentWebsite, setCurrentWebsite] = useState<string | null>(null)
-  const searchParams = useSearchParams()
-
-  useEffect(() => {
-    const loadWebsite = async () => {
-      const website = await getCurrentWebsite(searchParams)
-      setCurrentWebsite(website)
-    }
-    loadWebsite()
-  }, [searchParams])
+  const { currentWebsite, isLoading } = useWebsite()
 
   // Mock data - replace with actual data from your API
   const mockData = {
@@ -69,6 +62,30 @@ export default function SeoAuditPage() {
     },
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
+          <p className="text-sm text-muted-foreground">Loading website data...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!currentWebsite) {
+    return (
+      <div className="min-h-screen bg-background p-8">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Please select a website to view SEO audit data
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="top-0 z-10 border-b w-full">
@@ -82,19 +99,17 @@ export default function SeoAuditPage() {
                   <Separator orientation="vertical" className="h-6" />
                   <div className="flex items-center">
                     <Globe className="h-4 w-4 text-primary mr-1.5" />
-                    <span className="font-medium text-primary">{currentWebsite || 'No website selected'}</span>
+                    <span className="font-medium text-primary">{currentWebsite}</span>
                   </div>
-                  {currentWebsite && (
-                    <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-primary/20">
-                      Active
-                    </Badge>
-                  )}
+                  <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-primary/20">
+                    Active
+                  </Badge>
                 </div>
 
                 <div className="flex items-center text-sm text-muted-foreground gap-4 mt-1">
                   <div className="flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5" />
-                    <span>Updated: April 6, 2025</span>
+                    <span>Last updated: {new Date().toLocaleDateString()}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Tag className="h-3.5 w-3.5" />
@@ -256,7 +271,7 @@ export default function SeoAuditPage() {
           </TabsContent>
 
           <TabsContent value="issues" className="mt-0">
-            <IssuesTab issues={[]} />
+            <IssuesTab />
           </TabsContent>
 
           <TabsContent value="keywords" className="mt-0">
@@ -276,14 +291,7 @@ export default function SeoAuditPage() {
           </TabsContent>
 
           <TabsContent value="crawled-pages" className="mt-0">
-            <Card>
-              <CardHeader>
-                <CardTitle>Crawled Pages</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Crawled pages content will be displayed here.</p>
-              </CardContent>
-            </Card>
+            <CrawledPagesTab />
           </TabsContent>
 
           <TabsContent value="compare-crawls" className="mt-0">
@@ -298,14 +306,7 @@ export default function SeoAuditPage() {
           </TabsContent>
 
           <TabsContent value="progress" className="mt-0">
-            <Card>
-              <CardHeader>
-                <CardTitle>Progress</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Progress content will be displayed here.</p>
-              </CardContent>
-            </Card>
+            <ProgressTab />
           </TabsContent>
 
           <TabsContent value="js-impact" className="mt-0">

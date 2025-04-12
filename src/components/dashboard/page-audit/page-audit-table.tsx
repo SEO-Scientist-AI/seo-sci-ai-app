@@ -42,6 +42,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendIndicator } from "@/components/dashboard/trend-indicator";
 import { DashboardIcon } from "@radix-ui/react-icons";
+import { useWebsite } from "@/hooks/use-website";
 
 interface PagesTableProps {
   initialPages: SearchAnalyticsPage[];
@@ -105,6 +106,7 @@ function getScoreSegments(score: number) {
 }
 
 export function PagesTable({ initialPages }: PagesTableProps) {
+  const { currentWebsite, isLoading: isWebsiteLoading } = useWebsite();
   const { filters } = useAnalyticsFilters();
   const [pages, setPages] = useState(initialPages);
   const [loading, setLoading] = useState(false);
@@ -116,18 +118,25 @@ export function PagesTable({ initialPages }: PagesTableProps) {
 
   useEffect(() => {
     async function fetchPages() {
+      if (!currentWebsite) return;
+      
       setLoading(true);
       try {
         const newPages = await filterAnalytics(filters);
         setPages(newPages);
       } catch (error) {
         console.error("Error fetching pages:", error);
+        toast.error("Failed to fetch page data");
       } finally {
         setLoading(false);
       }
     }
-    fetchPages();
-  }, [filters]);
+
+    // Only fetch if we have a website selected
+    if (currentWebsite && !isWebsiteLoading) {
+      fetchPages();
+    }
+  }, [filters, currentWebsite, isWebsiteLoading]);
 
   // Update the fetchPageTitle function with the correct API endpoint
   const fetchPageTitle = async (url: string) => {
@@ -385,9 +394,10 @@ export function PagesTable({ initialPages }: PagesTableProps) {
                   </TableHead>
                 </TableRow>
               </TableHeader>
-              {loading ? (
-                <TableBody>
-                  {Array.from({ length: 5 }).map((_, i) => (
+              <TableBody>
+                {(loading || isWebsiteLoading) ? (
+                  // Loading skeleton rows
+                  Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
                       <TableCell>
                         <div className="flex items-center justify-between">
@@ -415,35 +425,21 @@ export function PagesTable({ initialPages }: PagesTableProps) {
                         </div>
                       </TableCell>
                       <TableCell className={cn("text-right", cellDividerClass)}>
-                        <div className="flex items-center justify-end gap-2">
-                          <Skeleton className="h-4 w-4" />
-                          <Skeleton className="h-6 w-12 rounded-full" />
-                        </div>
+                        <Skeleton className="h-6 w-12 ml-auto rounded-full" />
                       </TableCell>
                       <TableCell className={cn("text-right", cellDividerClass)}>
-                        <div className="flex items-center justify-end gap-1">
-                          <Skeleton className="h-4 w-4" />
-                          <Skeleton className="h-4 w-16" />
-                        </div>
+                        <Skeleton className="h-4 w-16 ml-auto" />
                       </TableCell>
                       <TableCell className={cn("text-right", cellDividerClass)}>
-                        <div className="flex items-center justify-end gap-1">
-                          <Skeleton className="h-4 w-4" />
-                          <Skeleton className="h-4 w-16" />
-                        </div>
+                        <Skeleton className="h-4 w-16 ml-auto" />
                       </TableCell>
                       <TableCell className={cn("text-right", cellDividerClass)}>
-                        <div className="flex items-center justify-end gap-1">
-                          <Skeleton className="h-4 w-4" />
-                          <Skeleton className="h-4 w-12" />
-                        </div>
+                        <Skeleton className="h-4 w-12 ml-auto" />
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              ) : (
-                <TableBody>
-                  {pages.map((page, i) => {
+                  ))
+                ) : (
+                  pages.map((page, i) => {
                     const isSpecialMessage = 
                       page.mainKeyword === "Property not found in Search Console" || 
                       page.mainKeyword === "No data in Search Console" ||
@@ -592,9 +588,9 @@ export function PagesTable({ initialPages }: PagesTableProps) {
                         </TableCell>
                       </TableRow>
                     );
-                  })}
-                </TableBody>
-              )}
+                  })
+                )}
+              </TableBody>
             </Table>
           </div>
         </CardContent>

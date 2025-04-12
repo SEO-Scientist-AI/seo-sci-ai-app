@@ -2,4 +2,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import * as schema from "./schema";
 
-export const db = drizzle(process.env.DATABASE, { schema, logger: true });
+// @ts-ignore - D1 binding is injected by Cloudflare Workers
+const db = drizzle(process.env.DATABASE as unknown as D1Database, { schema, logger: true });
+
+export { db };
