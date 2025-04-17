@@ -1,5 +1,38 @@
 # SEO Scientist Updates
 
+## April 17, 2024
+
+### Loading States and API Integration Enhancements
+
+#### Changes Implemented
+- **Granular loading skeletons**: Replaced full-page skeletons with targeted component-level skeletons in Overview and Issues tabs
+- **Real API integration for page counts**: Implemented real API data for the "Pages Affected" count in the Issues tab
+- **Optimized API call strategy**: Added caching and tracking to minimize redundant API calls
+- **Improved error handling**: Implemented isolated error handling for individual API requests
+
+#### Implementation Details
+- Enhanced `OverviewTab` component to show individual skeletons for each section instead of a complete tab skeleton
+- Modified `IssuesTab` component to fetch and display real data for "Pages Affected" column
+- Implemented a caching system using `Map<string, Record<string, number>>` for storing API responses
+- Used React's `useRef` with `Set<string>` to track which audit IDs have been fetched
+- Implemented conditional skeleton rendering in table cells while data is loading
+- Integrated with the `/api/performance/issues/count` endpoint for retrieving affected page counts
+- Used `Promise.allSettled()` for parallel API requests with independent error handling
+- Added proper dependencies to effect hooks to prevent unnecessary re-fetching
+
+#### Technical Details
+- Modified files:
+  - `src/components/dashboard/seo-audit/tabs/overview-tab.tsx`
+  - `src/components/dashboard/seo-audit/tabs/issues-tab.tsx`
+  - `src/app/(main)/seo-audit/page.tsx`
+- Added documentation in `doc/loading-states-and-api-integration.md`
+
+#### User Experience Improvements
+- Faster perceived loading times with skeleton UI structures
+- Reduced layout shifts during data loading
+- More accurate data representation with real API values
+- Smoother transitions between loading and loaded states
+
 ## July 23, 2023
 
 ### Website Selection System Enhancements

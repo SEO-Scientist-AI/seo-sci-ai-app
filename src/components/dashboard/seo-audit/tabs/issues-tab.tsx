@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -11,17 +12,37 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, AlertOctagon, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { IssuesSkeleton } from "../issues-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Define Web Vitals audit type
+interface WebVitalsAudit {
+  id: string;
+  title: string;
+  description: string;
+  score: number;
+  display_value: string | null;
+  details_summary: any;
+}
 
 interface SeoIssue {
   id: string;
   name: string;
   severity: "Warning" | "Error";
-  pagesAffected: number;
+  pagesAffected: number | null;
   impact: "Low" | "Medium" | "High";
 }
 
+interface PageCountData {
+  audit_id: string;
+  title: string;
+  affected_pages_count: number;
+}
+
+// Mock issues as fallback
 const mockIssues: SeoIssue[] = [
   {
     id: "1",
@@ -60,9 +81,92 @@ const mockIssues: SeoIssue[] = [
   },
 ];
 
+interface IssuesTabProps {
+  failedAudits?: WebVitalsAudit[];
+  isLoading?: boolean;
+  error?: string | null;
+  currentWebsite?: string;
+}
+
 const cellDividerClass = "border-l border-border/50 first:border-l-0";
 
-export function IssuesTab() {
+// Cache for storing page counts to avoid redundant API calls
+const pageCountsCache = new Map<string, Record<string, number>>();
+
+export function IssuesTab({ failedAudits, isLoading = false, error = null, currentWebsite }: IssuesTabProps = {}) {
+  const [pageCountsMap, setPageCountsMap] = useState<Record<string, number>>({});
+  const [pageCountsLoading, setPageCountsLoading] = useState(false);
+  const [pageCountsError, setPageCountsError] = useState<string | null>(null);
+  const fetchedAuditIds = useRef<Set<string>>(new Set());
+
+  // Fetch page counts for failed audits - optimized to avoid redundant calls
+  useEffect(() => {
+    if (!failedAudits || failedAudits.length === 0 || !currentWebsite) return;
+    
+    // Check if we already have data in cache
+    const cacheKey = `${currentWebsite}`;
+    if (pageCountsCache.has(cacheKey)) {
+      setPageCountsMap(pageCountsCache.get(cacheKey) || {});
+      return;
+    }
+    
+    // Identify which audit IDs need to be fetched
+    const auditIdsToFetch = failedAudits
+      .map(audit => audit.id)
+      .filter(id => !fetchedAuditIds.current.has(id));
+    
+    if (auditIdsToFetch.length === 0) return;
+    
+    setPageCountsLoading(true);
+    
+    // Prepare for batch fetching - ideally the API would support multiple audit_ids
+    // but we'll work with what we have
+    const fetchPageCounts = async () => {
+      try {
+        const countsMap: Record<string, number> = {...pageCountsMap};
+        const pendingFetches = auditIdsToFetch.map(async (auditId) => {
+          try {
+            // Add to tracked set to avoid refetching
+            fetchedAuditIds.current.add(auditId);
+            
+            const response = await fetch(
+              `https://api.seoscientist.ai/api/performance/issues/count?domain=${encodeURIComponent(currentWebsite)}&audit_id=${encodeURIComponent(auditId)}`
+            );
+            
+            if (!response.ok) {
+              throw new Error(`Error fetching count for ${auditId}: ${response.statusText}`);
+            }
+            
+            const data = await response.json() as PageCountData[];
+            
+            // Store the count in our map
+            if (data && data.length > 0) {
+              countsMap[auditId] = data[0].affected_pages_count;
+            }
+            
+            return { auditId, success: true };
+          } catch (err) {
+            console.error(`Error fetching count for ${auditId}:`, err);
+            return { auditId, success: false };
+          }
+        });
+        
+        await Promise.allSettled(pendingFetches);
+        
+        // Update state and cache
+        setPageCountsMap(countsMap);
+        pageCountsCache.set(cacheKey, countsMap);
+      } catch (err) {
+        console.error("Error fetching page counts:", err);
+        setPageCountsError("Failed to load page counts");
+      } finally {
+        setPageCountsLoading(false);
+      }
+    };
+    
+    fetchPageCounts();
+  }, [failedAudits, currentWebsite, pageCountsMap]);
+
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "Error":
@@ -84,6 +188,60 @@ export function IssuesTab() {
         return null;
     }
   };
+
+  // Convert Web Vitals audits to issues if available
+  const getIssuesFromAudits = () => {
+    if (!failedAudits || failedAudits.length === 0) {
+      return mockIssues;
+    }
+    
+    return failedAudits.map((audit) => {
+      // Determine severity based on score
+      // 0-0.49: Error, 0.5-0.89: Warning, 0.9+: Low impact warning
+      let severity: "Warning" | "Error" = "Warning";
+      let impact: "Low" | "Medium" | "High" = "Medium";
+      
+      if (audit.score < 0.5) {
+        severity = "Error";
+        impact = "High";
+      } else if (audit.score < 0.9) {
+        severity = "Warning";
+        impact = "Medium";
+      } else {
+        severity = "Warning";
+        impact = "Low";
+      }
+      
+      // If we have page count data, use it. Otherwise, set to null to show skeleton
+      const pagesAffected = audit.id in pageCountsMap ? pageCountsMap[audit.id] : null;
+      
+      return {
+        id: audit.id,
+        name: audit.title,
+        severity,
+        pagesAffected,
+        impact,
+      };
+    });
+  };
+
+  const issues = getIssuesFromAudits();
+
+  if (isLoading) {
+    return <IssuesSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Error Loading Issues</AlertTitle>
+        <AlertDescription>
+          {error}. Using fallback data where possible.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <Card className="shadow-sm border-border/40">
@@ -108,7 +266,7 @@ export function IssuesTab() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockIssues.map((issue) => (
+              {issues.map((issue) => (
                 <TableRow
                   key={issue.id}
                   className="group cursor-pointer transition-colors h-14"
@@ -131,7 +289,11 @@ export function IssuesTab() {
                     </Badge>
                   </TableCell>
                   <TableCell className={cellDividerClass}>
-                    <span className="font-medium">{issue.pagesAffected}</span>
+                    {issue.pagesAffected === null ? (
+                      <Skeleton className="h-5 w-10" />
+                    ) : (
+                      <span className="font-medium">{issue.pagesAffected}</span>
+                    )}
                   </TableCell>
                   <TableCell className={cellDividerClass}>
                     <span className="font-medium">{issue.impact}</span>

@@ -8,6 +8,16 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
+// Tab components
 import { OverviewTab } from "@/components/dashboard/seo-audit/tabs/overview-tab"
 import { IssuesTab } from "@/components/dashboard/seo-audit/tabs/issues-tab"
 import { KeywordsTab } from "@/components/dashboard/seo-audit/tabs/keywords-tab"
@@ -15,7 +25,9 @@ import { ContentTab } from "@/components/dashboard/seo-audit/tabs/content-tab"
 import { PerformanceTab } from "@/components/dashboard/seo-audit/tabs/performance-tab"
 import { RecommendationsTab } from "@/components/dashboard/seo-audit/tabs/recommendations-tab"
 import { CrawledPagesTab } from "@/components/dashboard/seo-audit/tabs/crawled-pages-tab"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { ProgressTab } from "@/components/dashboard/seo-audit/tabs/progress-tab"
+
+// Icons
 import {
   RefreshCw,
   Eye,
@@ -32,24 +44,181 @@ import {
   AlertCircle,
   Loader2
 } from "lucide-react"
-import { ProgressTab } from "@/components/dashboard/seo-audit/tabs/progress-tab"
+
+// Skeleton components
+import { TabSkeleton } from "@/components/dashboard/seo-audit/tab-skeleton"
+import { OverviewSkeleton } from "@/components/dashboard/seo-audit/overview-skeleton"
 
 export const runtime = "edge";
 
+// Web Vitals API response type
+interface WebVitalsResponse {
+  requested_url: string;
+  final_url: string;
+  fetch_time: string;
+  overall_performance_score: number;
+  lab_data: Record<string, any> | null;
+  field_data: any;
+  diagnostics: any;
+  failed_audits: Array<{
+    id: string;
+    title: string;
+    description: string;
+    score: number;
+    display_value: string | null;
+    details_summary: any;
+  }>;
+  error: string | null;
+}
+
+// Device strategy for web vitals API
+type Strategy = "desktop" | "mobile";
+
+// Custom hook to fetch Web Vitals data
+function useWebVitals(url: string | null, strategy: Strategy = "desktop") {
+  const [data, setData] = useState<WebVitalsResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!url) return;
+
+    const fetchWebVitals = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(
+          `https://api.seoscientist.ai/api/performance/web-vitals?url=${encodeURIComponent(url)}&strategy=${strategy}`
+        );
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error: ${response.status}`);
+        }
+        
+        const webVitalsData = await response.json();
+        setData(webVitalsData as WebVitalsResponse);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        console.error('Error fetching Web Vitals:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchWebVitals();
+  }, [url, strategy]);
+
+  // Function to manually refresh data
+  const refreshData = async () => {
+    if (!url) return;
+    
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `https://api.seoscientist.ai/api/performance/web-vitals?url=${encodeURIComponent(url)}&strategy=${strategy}&nocache=true`,
+        { cache: 'no-store' }
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      
+      const webVitalsData = await response.json();
+      setData(webVitalsData as WebVitalsResponse);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      console.error('Error refreshing Web Vitals:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { data, isLoading, error, refreshData };
+}
+
+// Create performance metrics from web vitals data
+function createPerformanceMetrics(webVitalsData: WebVitalsResponse | null) {
+  if (!webVitalsData) return [];
+
+  // Extract key metrics from failed_audits
+  const metrics = [];
+  
+  // Get overall performance score
+  metrics.push({
+    id: 'performance-score',
+    name: 'Performance Score',
+    value: Math.round(webVitalsData.overall_performance_score * 100),
+    target: 100,
+    unit: '',
+    trend: 'stable' as const,
+    change: 0,
+  });
+  
+  // Map key metrics from failed_audits
+  const metricsMap: Record<string, { name: string, target: number, unit: string }> = {
+    'first-contentful-paint': { name: 'First Contentful Paint', target: 1.8, unit: 's' },
+    'largest-contentful-paint': { name: 'Largest Contentful Paint', target: 2.5, unit: 's' },
+    'speed-index': { name: 'Speed Index', target: 3.4, unit: 's' },
+    'total-blocking-time': { name: 'Total Blocking Time', target: 200, unit: 'ms' },
+    'cumulative-layout-shift': { name: 'Cumulative Layout Shift', target: 0.1, unit: '' },
+    'interactive': { name: 'Time to Interactive', target: 3.8, unit: 's' }
+  };
+  
+  // Process failed audits to extract metrics
+  webVitalsData.failed_audits.forEach(audit => {
+    if (metricsMap[audit.id]) {
+      // Extract numeric value from display_value (e.g., "1.7 s" -> 1.7)
+      let value = 0;
+      if (audit.display_value) {
+        const match = audit.display_value.match(/(\d+(\.\d+)?)/);
+        if (match) {
+          value = parseFloat(match[0]);
+        }
+      }
+      
+      metrics.push({
+        id: audit.id,
+        name: metricsMap[audit.id].name,
+        value: value,
+        target: metricsMap[audit.id].target,
+        unit: metricsMap[audit.id].unit,
+        trend: 'stable' as const,
+        change: 0
+      });
+    }
+  });
+  
+  return metrics;
+}
+
 export default function SeoAuditPage() {
   const [activeTab, setActiveTab] = useState("overview")
-  const { currentWebsite, isLoading } = useWebsite()
+  const [strategy, setStrategy] = useState<Strategy>("desktop")
+  const { currentWebsite, isLoading: websiteLoading } = useWebsite()
+  const { 
+    data: webVitalsData, 
+    isLoading: vitalsLoading, 
+    error: vitalsError,
+    refreshData: refreshWebVitals
+  } = useWebVitals(currentWebsite ? `https://${currentWebsite}` : null, strategy);
 
+  // Performance metrics based on Web Vitals API data
+  const performanceMetrics = createPerformanceMetrics(webVitalsData);
+
+  // Count issues from web vitals data
+  const issuesCount = webVitalsData?.failed_audits?.length || 0;
+  
   // Mock data - replace with actual data from your API
   const mockData = {
     siteHealth: {
-      score: 80,
-      issues: 806,
+      score: webVitalsData ? Math.round(webVitalsData.overall_performance_score * 100) : 80,
+      issues: issuesCount || 806,
       warnings: 2778,
       recommendations: 611,
     },
     metrics: {
-      performance: 85,
+      performance: webVitalsData ? Math.round(webVitalsData.overall_performance_score * 100) : 85,
       accessibility: 90,
       bestPractices: 75,
       seo: 80,
@@ -63,6 +232,19 @@ export default function SeoAuditPage() {
       blocked: 0,
     },
   }
+
+  // Determine overall loading state - website data is essential
+  const isLoading = websiteLoading;
+
+  // Handle rerun audit action
+  const handleRerunAudit = () => {
+    refreshWebVitals();
+  };
+
+  // Toggle between mobile and desktop strategy
+  const toggleStrategy = () => {
+    setStrategy(prev => prev === "desktop" ? "mobile" : "desktop");
+  };
 
   if (isLoading) {
     return (
@@ -111,7 +293,7 @@ export default function SeoAuditPage() {
                 <div className="flex items-center text-sm text-muted-foreground gap-4 mt-1">
                   <div className="flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5" />
-                    <span>Last updated: {new Date().toLocaleDateString()}</span>
+                    <span>Last updated: {webVitalsData ? new Date(webVitalsData.fetch_time).toLocaleDateString() : new Date().toLocaleDateString()}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Tag className="h-3.5 w-3.5" />
@@ -121,9 +303,24 @@ export default function SeoAuditPage() {
               </div>
 
               <div className="flex items-center gap-2 self-end md:self-auto">
-                <Button variant="default" size="sm" className="gap-1.5 h-9 px-3">
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  <span>Rerun Audit</span>
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  className="gap-1.5 h-9 px-3"
+                  onClick={handleRerunAudit}
+                  disabled={vitalsLoading}
+                >
+                  {vitalsLoading ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Running...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      <span>Rerun Audit</span>
+                    </>
+                  )}
                 </Button>
 
                 <DropdownMenu>
@@ -171,13 +368,44 @@ export default function SeoAuditPage() {
             <div className="container mx-auto">
               <div className="px-4 md:px-6 py-3 flex flex-wrap gap-3 md:gap-6 justify-between items-center">
                 <div className="flex flex-wrap gap-3 md:gap-6">
-                  <Badge
-                    variant="outline"
-                    className="h-7 px-3 bg-background border-border flex items-center gap-1.5 text-sm font-normal"
-                  >
-                    <Smartphone className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>Mobile</span>
-                  </Badge>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge
+                          variant="outline"
+                          className={`h-7 px-3 bg-background border-border flex items-center gap-1.5 text-sm font-normal ${vitalsLoading ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'} transition-colors ${strategy === "mobile" ? "bg-primary/10 border-primary/20 text-primary" : ""}`}
+                          onClick={vitalsLoading ? undefined : toggleStrategy}
+                        >
+                          {vitalsLoading ? (
+                            <Loader2 className="h-3.5 w-3.5 text-muted-foreground animate-spin" />
+                          ) : strategy === "mobile" ? (
+                            <Smartphone className="h-3.5 w-3.5 text-muted-foreground" />
+                          ) : (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-muted-foreground"
+                            >
+                              <rect x="2" y="3" width="20" height="14" rx="2" />
+                              <line x1="8" x2="16" y1="21" y2="21" />
+                              <line x1="12" x2="12" y1="17" y2="21" />
+                            </svg>
+                          )}
+                          <span>{strategy === "mobile" ? "Mobile" : "Desktop"}</span>
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Click to switch to {strategy === "mobile" ? "Desktop" : "Mobile"} view</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
 
                   <Badge
                     variant="outline"
@@ -269,57 +497,97 @@ export default function SeoAuditPage() {
               siteHealth={mockData.siteHealth}
               metrics={mockData.metrics}
               crawledPages={mockData.crawledPages}
+              isLoading={vitalsLoading}
             />
           </TabsContent>
 
           <TabsContent value="issues" className="mt-0">
-            <IssuesTab />
+            <IssuesTab 
+              failedAudits={webVitalsData?.failed_audits || []} 
+              isLoading={vitalsLoading}
+              error={vitalsError}
+              currentWebsite={currentWebsite}
+            />
           </TabsContent>
 
           <TabsContent value="keywords" className="mt-0">
-            <KeywordsTab keywords={[]} />
+            {vitalsLoading ? (
+              <TabSkeleton />
+            ) : (
+              <KeywordsTab keywords={[]} />
+            )}
           </TabsContent>
 
           <TabsContent value="on-page" className="mt-0">
-            <ContentTab metrics={[]} />
+            {vitalsLoading ? (
+              <TabSkeleton />
+            ) : (
+              <ContentTab metrics={[]} />
+            )}
           </TabsContent>
 
           <TabsContent value="technical" className="mt-0">
-            <PerformanceTab metrics={[]} />
+            <PerformanceTab 
+              metrics={performanceMetrics} 
+              overallScore={webVitalsData?.overall_performance_score} 
+              failedAudits={webVitalsData?.failed_audits}
+              isLoading={vitalsLoading}
+              error={vitalsError}
+            />
           </TabsContent>
 
           <TabsContent value="statistics" className="mt-0">
-            <RecommendationsTab recommendations={[]} />
+            {vitalsLoading ? (
+              <TabSkeleton />
+            ) : (
+              <RecommendationsTab recommendations={[]} />
+            )}
           </TabsContent>
 
           <TabsContent value="crawled-pages" className="mt-0">
-            <CrawledPagesTab />
+            {vitalsLoading ? (
+              <TabSkeleton />
+            ) : (
+              <CrawledPagesTab />
+            )}
           </TabsContent>
 
           <TabsContent value="compare-crawls" className="mt-0">
-            <Card>
-              <CardHeader>
-                <CardTitle>Compare Crawls</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Compare crawls content will be displayed here.</p>
-              </CardContent>
-            </Card>
+            {vitalsLoading ? (
+              <TabSkeleton />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Compare Crawls</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">Compare crawls content will be displayed here.</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="progress" className="mt-0">
-            <ProgressTab />
+            {vitalsLoading ? (
+              <TabSkeleton />
+            ) : (
+              <ProgressTab />
+            )}
           </TabsContent>
 
           <TabsContent value="js-impact" className="mt-0">
-            <Card>
-              <CardHeader>
-                <CardTitle>JS Impact</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">JS impact content will be displayed here.</p>
-              </CardContent>
-            </Card>
+            {vitalsLoading ? (
+              <TabSkeleton />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>JS Impact</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">JS impact content will be displayed here.</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>
