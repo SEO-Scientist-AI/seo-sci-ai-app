@@ -54,17 +54,26 @@ export function KeywordsTab({ keywords: initialKeywords }: KeywordsTabProps) {
     if (!currentWebsite) return;
     
     setLoading(true);
+    setError(null);
+    
     try {
+      console.log(`Fetching keywords for ${currentWebsite}, forceRefresh: ${forceRefresh}`);
       const response = await getWebsiteKeywords(currentWebsite, forceRefresh, { limit: 100 });
+      
+      console.log(`Keywords response:`, response);
+      
       if (response.error) {
         setError(response.error);
+      } else if (!response.keywords || response.keywords.length === 0) {
+        setError("No keywords found. Try refreshing or check API connectivity.");
+        setKeywords([]);
       } else {
         setKeywords(response.keywords || []);
         setError(null);
       }
     } catch (err) {
-      setError("Failed to load keywords");
-      console.error(err);
+      console.error("Error in keywords component:", err);
+      setError(`Failed to load keywords: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setLoading(false);
       setRefreshing(false);

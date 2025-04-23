@@ -68,11 +68,13 @@ export async function getWebsiteKeywords(
     if (!targetSite) {
       return { error: "No website selected", keywords: [] };
     }
-
+    
+    console.log(`Getting keywords for: ${targetSite}, forceRefresh: ${forceRefresh}`);
     const { limit = 50, offset = 0, language_code = "en", location_code = 2840 } = options;
 
     // First try to get existing keywords
     const existingKeywords = await fetchExistingKeywords(targetSite, limit, offset);
+    console.log(`Fetch result: total=${existingKeywords.total}, statusCode=${existingKeywords.statusCode}`);
 
     // If we have keywords and don't need to refresh, return them
     if (existingKeywords.total > 0 && !forceRefresh) {
@@ -82,14 +84,17 @@ export async function getWebsiteKeywords(
       };
     }
 
-    // If no keywords exist or force refresh is requested, upsert keywords
-    if (existingKeywords.total === 0 || forceRefresh) {
+    // If no keywords exist (404) or force refresh is requested, upsert keywords
+    if (existingKeywords.statusCode === 404 || existingKeywords.total === 0 || forceRefresh) {
+      console.log(`Upserting keywords for ${targetSite}`);
       const upsertResult = await upsertKeywords(targetSite, language_code, location_code, limit);
       
       if (upsertResult.error) {
+        console.error(`Upsert error: ${upsertResult.error}`);
         return { error: upsertResult.error, keywords: [] };
       }
       
+      console.log(`Upsert successful, fetching fresh keywords for ${targetSite}`);
       // After upserting, fetch the keywords again
       const freshKeywords = await fetchExistingKeywords(targetSite, limit, offset);
       
@@ -99,17 +104,19 @@ export async function getWebsiteKeywords(
       };
     }
 
-    return { error: "Failed to get keywords", keywords: [] };
+    // If we get here, something unexpected happened
+    console.error(`Unexpected flow: statusCode=${existingKeywords.statusCode}, total=${existingKeywords.total}`);
+    return { error: `Failed to get keywords (status ${existingKeywords.statusCode})`, keywords: [] };
   } catch (error) {
-    console.error("Error fetching keywords:", error);
-    return { error: "Failed to fetch keywords", keywords: [] };
+    console.error("Error in getWebsiteKeywords:", error);
+    return { error: "Failed to fetch keywords: " + (error instanceof Error ? error.message : String(error)), keywords: [] };
   }
 }
 
 /**
  * Fetch existing keywords for a site
  */
-async function fetchExistingKeywords(site: string, limit: number, offset: number): Promise<KeywordsResponse> {
+async function fetchExistingKeywords(site: string, limit: number, offset: number): Promise<{ total: number; results: ApiKeyword[]; statusCode?: number }> {
   const params = new URLSearchParams({
     site,
     limit: limit.toString(),
@@ -119,7 +126,7 @@ async function fetchExistingKeywords(site: string, limit: number, offset: number
   // Check for API credentials
   if (!API_USER || !API_PASSWORD) {
     console.error("API credentials not found in environment variables");
-    return { total: 0, results: [] };
+    return { total: 0, results: [], statusCode: 500 };
   }
 
   // Create credentials for authentication
@@ -127,22 +134,31 @@ async function fetchExistingKeywords(site: string, limit: number, offset: number
     `${API_USER}:${API_PASSWORD}`
   ).toString('base64');
 
-  const response = await fetch(`${API_BASE}/keywords/site?${params.toString()}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Basic ${credentials}`,
-    },
-    cache: "no-store",
-  });
+  try {
+    console.log(`Fetching keywords from: ${API_BASE}/keywords/site?${params.toString()}`);
+    
+    const response = await fetch(`${API_BASE}/keywords/site?${params.toString()}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Basic ${credentials}`,
+      },
+      cache: "no-store",
+    });
 
-  if (!response.ok) {
-    console.error("Failed to fetch keywords:", response.status, response.statusText);
-    return { total: 0, results: [] };
+    console.log(`GET keywords response status: ${response.status} ${response.statusText}`);
+
+    // Return status code for better flow control
+    if (!response.ok) {
+      return { total: 0, results: [], statusCode: response.status };
+    }
+
+    const data = await response.json();
+    return { ...data as KeywordsResponse, statusCode: response.status };
+  } catch (error) {
+    console.error("Error fetching keywords:", error);
+    return { total: 0, results: [], statusCode: 500 };
   }
-
-  const data = await response.json();
-  return data as KeywordsResponse;
 }
 
 /**
@@ -166,6 +182,8 @@ async function upsertKeywords(
       `${API_USER}:${API_PASSWORD}`
     ).toString('base64');
 
+    console.log(`POSTing to upsert keywords at ${API_BASE}/keywords/site`);
+    
     const response = await fetch(`${API_BASE}/keywords/site`, {
       method: "POST",
       headers: {
@@ -180,17 +198,26 @@ async function upsertKeywords(
       }),
     });
 
+    console.log(`POST keywords response status: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      console.error("Failed to upsert keywords:", response.status, response.statusText);
-      const errorData = await response.json() as { detail?: string };
-      return { error: errorData.detail || "Failed to upsert keywords" };
+      const responseText = await response.text();
+      console.error(`Failed to upsert keywords: ${response.status} ${response.statusText}`, responseText);
+      
+      try {
+        const errorData = JSON.parse(responseText) as { detail?: string };
+        return { error: errorData.detail || `HTTP error ${response.status}` };
+      } catch (e) {
+        return { error: `HTTP error ${response.status}: ${responseText.substring(0, 100)}` };
+      }
     }
 
     const data = await response.json();
+    console.log(`Upsert response:`, data);
     return data as UpsertResponse;
   } catch (error) {
     console.error("Error upserting keywords:", error);
-    return { error: "Failed to upsert keywords" };
+    return { error: "Failed to upsert keywords: " + (error instanceof Error ? error.message : String(error)) };
   }
 }
 
