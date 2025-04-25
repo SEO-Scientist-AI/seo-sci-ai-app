@@ -2,6 +2,17 @@
 
 import { cookies } from "next/headers";
 
+// Add TypeScript declaration at the top of the file
+declare global {
+  var keywordCache: {
+    [key: string]: {
+      total: number;
+      keywords: KeywordResult[];
+      timestamp: number;
+    }
+  };
+}
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.seoscientist.ai";
 const API_USER = process.env.NEXT_PUBLIC_API_USER;
 const API_PASSWORD = process.env.NEXT_PUBLIC_API_PASSWORD;
@@ -72,12 +83,34 @@ export async function getWebsiteKeywords(
     console.log(`Getting keywords for: ${targetSite}, forceRefresh: ${forceRefresh}`);
     const { limit = 50, offset = 0, language_code = "en", location_code = 2840 } = options;
 
+    // Create cache key for this specific request
+    const cacheKey = `keywords-${targetSite}-${limit}-${offset}-${language_code}-${location_code}`;
+    const cachedData = global.keywordCache?.[cacheKey];
+
+    // Check for cached data (in memory cache)
+    if (!forceRefresh && cachedData && (Date.now() - cachedData.timestamp) < 15 * 60 * 1000) {
+      console.log(`Using cached keywords for ${targetSite}`);
+      return {
+        total: cachedData.total,
+        keywords: cachedData.keywords,
+        cached: true
+      };
+    }
+
     // First try to get existing keywords
     const existingKeywords = await fetchExistingKeywords(targetSite, limit, offset);
     console.log(`Fetch result: total=${existingKeywords.total}, statusCode=${existingKeywords.statusCode}`);
 
     // If we have keywords and don't need to refresh, return them
     if (existingKeywords.total > 0 && !forceRefresh) {
+      // Store in memory cache
+      if (!global.keywordCache) global.keywordCache = {};
+      global.keywordCache[cacheKey] = {
+        total: existingKeywords.total,
+        keywords: mapApiKeywordsToUIFormat(existingKeywords.results),
+        timestamp: Date.now()
+      };
+
       return {
         total: existingKeywords.total,
         keywords: mapApiKeywordsToUIFormat(existingKeywords.results),
@@ -98,6 +131,14 @@ export async function getWebsiteKeywords(
       // After upserting, fetch the keywords again
       const freshKeywords = await fetchExistingKeywords(targetSite, limit, offset);
       
+      // Store in memory cache
+      if (!global.keywordCache) global.keywordCache = {};
+      global.keywordCache[cacheKey] = {
+        total: freshKeywords.total,
+        keywords: mapApiKeywordsToUIFormat(freshKeywords.results),
+        timestamp: Date.now()
+      };
+
       return {
         total: freshKeywords.total,
         keywords: mapApiKeywordsToUIFormat(freshKeywords.results),

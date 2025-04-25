@@ -17,8 +17,10 @@ import {
 } from "@/components/ui/table";
 import { useWebsite } from "@/hooks/use-website";
 import { getWebsiteKeywords } from "@/app/actions/getWebsiteKeywords";
-import { RefreshCw, Search, ArrowUpDown, TrendingUp, TrendingDown, Minus, DollarSign } from "lucide-react";
+import { RefreshCw, Search, ArrowUpDown, TrendingUp, TrendingDown, Minus, DollarSign, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { toast } from "sonner";
 
 interface Keyword {
   id: string;
@@ -49,6 +51,9 @@ export function KeywordsTab({ keywords: initialKeywords }: KeywordsTabProps) {
   const [sortBy, setSortBy] = useState<string>("volume");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [refreshing, setRefreshing] = useState(false);
+  const [totalKeywords, setTotalKeywords] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const fetchKeywords = async (forceRefresh: boolean = false) => {
     if (!currentWebsite) return;
@@ -58,22 +63,32 @@ export function KeywordsTab({ keywords: initialKeywords }: KeywordsTabProps) {
     
     try {
       console.log(`Fetching keywords for ${currentWebsite}, forceRefresh: ${forceRefresh}`);
-      const response = await getWebsiteKeywords(currentWebsite, forceRefresh, { limit: 100 });
-      
-      console.log(`Keywords response:`, response);
+      const offset = (currentPage - 1) * pageSize;
+      const response = await getWebsiteKeywords(currentWebsite, forceRefresh, { 
+        limit: pageSize, 
+        offset: offset 
+      });
       
       if (response.error) {
         setError(response.error);
+        toast.error("Error loading keywords", {
+          description: response.error
+        });
       } else if (!response.keywords || response.keywords.length === 0) {
         setError("No keywords found. Try refreshing or check API connectivity.");
         setKeywords([]);
       } else {
         setKeywords(response.keywords || []);
+        setTotalKeywords(response.total || response.keywords.length);
         setError(null);
       }
     } catch (err) {
       console.error("Error in keywords component:", err);
-      setError(`Failed to load keywords: ${err instanceof Error ? err.message : String(err)}`);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(`Failed to load keywords: ${errorMessage}`);
+      toast.error("Error loading keywords", {
+        description: errorMessage
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -84,11 +99,14 @@ export function KeywordsTab({ keywords: initialKeywords }: KeywordsTabProps) {
     if (currentWebsite) {
       fetchKeywords();
     }
-  }, [currentWebsite]);
+  }, [currentWebsite, currentPage, pageSize]);
 
   const handleRefresh = () => {
     setRefreshing(true);
     fetchKeywords(true);
+    toast.info("Refreshing keyword data", {
+      description: "This may take a moment as we fetch the latest data."
+    });
   };
 
   const getDifficultyColor = (difficulty: Keyword["difficulty"]) => {
@@ -152,6 +170,12 @@ export function KeywordsTab({ keywords: initialKeywords }: KeywordsTabProps) {
     return sortDirection === "asc" ? <TrendingUp size={14} /> : <TrendingDown size={14} />;
   };
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const totalPages = Math.ceil(totalKeywords / pageSize);
+
   if (!currentWebsite) {
     return (
       <Card>
@@ -208,6 +232,8 @@ export function KeywordsTab({ keywords: initialKeywords }: KeywordsTabProps) {
             <SelectItem value="position">Position</SelectItem>
             <SelectItem value="volume">Volume</SelectItem>
             <SelectItem value="change">Change</SelectItem>
+            <SelectItem value="difficulty">Difficulty</SelectItem>
+            <SelectItem value="cpc">CPC</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -248,8 +274,22 @@ export function KeywordsTab({ keywords: initialKeywords }: KeywordsTabProps) {
                   Volume {getSortIcon("volume")}
                 </div>
               </TableHead>
-              <TableHead>Difficulty</TableHead>
-              <TableHead>CPC</TableHead>
+              <TableHead 
+                className="cursor-pointer"
+                onClick={() => handleSort("difficulty")}
+              >
+                <div className="flex items-center gap-1">
+                  Difficulty {getSortIcon("difficulty")}
+                </div>
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer"
+                onClick={() => handleSort("cpc")}
+              >
+                <div className="flex items-center gap-1">
+                  CPC {getSortIcon("cpc")}
+                </div>
+              </TableHead>
               <TableHead>Intent</TableHead>
             </TableRow>
           </TableHeader>
@@ -341,11 +381,73 @@ export function KeywordsTab({ keywords: initialKeywords }: KeywordsTabProps) {
         </Table>
       </div>
 
-      {keywords.length > 0 && (
-        <div className="flex justify-end gap-2">
+      {!loading && !error && totalKeywords > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-sm text-muted-foreground">
-            Showing {sortedKeywords.length} of {keywords.length} keywords
+            Showing {sortedKeywords.length} of {totalKeywords} keywords
           </div>
+          
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                  className={currentPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+              
+              {[...Array(totalPages)].map((_, i) => {
+                const page = i + 1;
+                // Show first page, last page, and pages around current page
+                if (
+                  page === 1 || 
+                  page === totalPages || 
+                  (page >= currentPage - 1 && page <= currentPage + 1)
+                ) {
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => handlePageChange(page)}
+                        isActive={page === currentPage}
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                }
+                // Show ellipsis for gaps
+                if (page === 2 || page === totalPages - 1) {
+                  return <PaginationEllipsis key={`ellipsis-${page}`} />;
+                }
+                return null;
+              })}
+              
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                  className={currentPage >= totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+          
+          <Select
+            value={pageSize.toString()}
+            onValueChange={(value) => {
+              setPageSize(parseInt(value));
+              setCurrentPage(1);
+            }}
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="Page size" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10 per page</SelectItem>
+              <SelectItem value="25">25 per page</SelectItem>
+              <SelectItem value="50">50 per page</SelectItem>
+              <SelectItem value="100">100 per page</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       )}
     </div>
