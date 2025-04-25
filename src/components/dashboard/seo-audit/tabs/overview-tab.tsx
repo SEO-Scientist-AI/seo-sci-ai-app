@@ -10,6 +10,7 @@ import { IssuesTable } from "../issues-table";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from "lucide-react";
+import { UrlFetcher } from "../url-fetcher";
 
 interface OverviewTabProps {
   siteHealth: {
@@ -145,6 +146,8 @@ export function OverviewTab({ siteHealth, metrics, crawledPages }: OverviewTabPr
           </CardContent>
         </Card>
       </div>
+
+      <UrlFetcher />
 
       <Card>
         <CardHeader>

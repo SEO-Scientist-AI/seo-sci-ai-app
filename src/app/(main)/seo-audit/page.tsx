@@ -16,6 +16,7 @@ import { PerformanceTab } from "@/components/dashboard/seo-audit/tabs/performanc
 import { RecommendationsTab } from "@/components/dashboard/seo-audit/tabs/recommendations-tab"
 import { CrawledPagesTab } from "@/components/dashboard/seo-audit/tabs/crawled-pages-tab"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { CrawlStatsBadge } from "@/components/dashboard/seo-audit/crawl-stats-badge"
 import {
   RefreshCw,
   Eye,
@@ -201,29 +202,8 @@ export default function SeoAuditPage() {
                     <span>JS rendering: Disabled</span>
                   </Badge>
 
-                  <Badge
-                    variant="outline"
-                    className="h-7 px-3 bg-background border-border flex items-center gap-1.5 text-sm font-normal"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-muted-foreground"
-                    >
-                      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                    </svg>
-                    <span>
-                      Pages crawled: <strong className="text-foreground">159</strong>/500
-                    </span>
-                  </Badge>
+                  <CrawlStatsBadge />
+
                 </div>
 
                 <div className="flex items-center gap-4">
