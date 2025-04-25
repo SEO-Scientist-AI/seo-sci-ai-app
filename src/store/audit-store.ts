@@ -8,6 +8,22 @@ export interface SeoIssue {
   impact: "Low" | "Medium" | "High";
 }
 
+interface WebVitalsResponse {
+  requested_url: string;
+  final_url: string;
+  fetch_time: string;
+  overall_performance_score: number | null;
+  lab_data: {
+    lcp: { value: number | null };
+    cls: { value: number | null };
+    tbt: { value: number | null };
+    fcp: { value: number | null };
+    si: { value: number | null };
+    tti: { value: number | null };
+  };
+  error: string | null;
+}
+
 interface AuditState {
   urls: string[];
   processedUrls: string[];
@@ -22,6 +38,7 @@ interface AuditState {
     total: number;
     items: SeoIssue[];
   };
+  urlAnalysis: Record<string, WebVitalsResponse>;
   
   // Actions
   setUrls: (urls: string[]) => void;
@@ -31,10 +48,11 @@ interface AuditState {
   setIssues: (issues: SeoIssue[]) => void;
   addProcessedUrl: (url: string) => void;
   addFailedUrl: (url: string) => void;
+  updateUrlAnalysis: (url: string, analysis: WebVitalsResponse) => void;
   resetState: () => void;
 }
 
-export const useAuditStore = create<AuditState>((set, get) => ({
+export const useAuditStore = create<AuditState>((set) => ({
   urls: [],
   processedUrls: [],
   failedUrls: [],
@@ -48,6 +66,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
     total: 0,
     items: [],
   },
+  urlAnalysis: {},
 
   setUrls: (urls) => set((state) => ({
     urls,
@@ -84,6 +103,13 @@ export const useAuditStore = create<AuditState>((set, get) => ({
     failedUrls: [...state.failedUrls, url]
   })),
 
+  updateUrlAnalysis: (url, analysis) => set((state) => ({
+    urlAnalysis: {
+      ...state.urlAnalysis,
+      [url]: analysis
+    }
+  })),
+
   resetState: () => set({
     urls: [],
     processedUrls: [],
@@ -92,5 +118,6 @@ export const useAuditStore = create<AuditState>((set, get) => ({
     isProcessing: false,
     progress: { total: 0, processed: 0 },
     issues: { total: 0, items: [] },
+    urlAnalysis: {},
   }),
 })); 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useAuditStore } from '@/store/audit-store';
 import { getGSCUrls } from '@/app/actions/getGscUrls';
+import { processUrlsInBatches } from '@/app/actions/processUrls';
 import { getWebsiteFromURL } from '@/lib/utils/website';
 import { RefreshCw, Globe } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -14,8 +15,9 @@ import { cn } from "@/lib/utils";
 export function UrlFetcher() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { urls, setUrls } = useAuditStore();
+  const { urls, setUrls, isProcessing } = useAuditStore();
   const searchParams = useSearchParams();
+  const currentWebsite = searchParams.get('website') || '';
   
   const fetchUrls = async (website: string) => {
     try {
@@ -28,6 +30,12 @@ export function UrlFetcher() {
 
       const fetchedUrls = await getGSCUrls(website);
       setUrls(fetchedUrls);
+      
+      // Automatically start processing URLs
+      if (fetchedUrls.length > 0 && !isProcessing) {
+        console.log('Starting URL processing after fetch');
+        await processUrlsInBatches(website);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch URLs');
       console.error('Error fetching URLs:', err);
@@ -38,14 +46,10 @@ export function UrlFetcher() {
 
   // Auto-fetch URLs when component mounts or website changes
   useEffect(() => {
-    const website = searchParams.get('website');
-    if (website) {
-      fetchUrls(website);
+    if (currentWebsite) {
+      fetchUrls(currentWebsite);
     }
-  }, [searchParams]); // Re-run when website changes
-
-  // Get current website for display
-  const currentWebsite = searchParams.get('website') || '';
+  }, [currentWebsite]); // Re-run when website changes
 
   return (
     <Card className="bg-card">
@@ -62,20 +66,20 @@ export function UrlFetcher() {
           </div>
           <Button 
             onClick={() => currentWebsite && fetchUrls(currentWebsite)}
-            disabled={isLoading || !currentWebsite}
+            disabled={isLoading || !currentWebsite || isProcessing}
             variant="outline"
             size="sm"
             className={cn(
               "gap-2 transition-all duration-200",
-              isLoading && "opacity-70"
+              (isLoading || isProcessing) && "opacity-70"
             )}
           >
             <RefreshCw className={cn(
               "h-4 w-4 transition-all",
-              isLoading && "animate-spin"
+              (isLoading || isProcessing) && "animate-spin"
             )} />
             <span className="hidden sm:inline-block">
-              {isLoading ? 'Fetching...' : 'Refresh URLs'}
+              {isLoading ? 'Fetching...' : isProcessing ? 'Processing...' : 'Refresh URLs'}
             </span>
           </Button>
         </CardTitle>
@@ -104,11 +108,11 @@ export function UrlFetcher() {
             <span className="font-medium text-foreground">{urls.length}</span>
           </div>
 
-          {isLoading && (
+          {(isLoading || isProcessing) && (
             <div className="space-y-2">
               <Progress value={undefined} className="w-full" />
               <p className="text-xs text-muted-foreground text-center animate-pulse">
-                Fetching URLs...
+                {isLoading ? 'Fetching URLs...' : 'Processing URLs...'}
               </p>
             </div>
           )}

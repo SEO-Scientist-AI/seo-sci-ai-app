@@ -17,6 +17,7 @@ import { RecommendationsTab } from "@/components/dashboard/seo-audit/tabs/recomm
 import { CrawledPagesTab } from "@/components/dashboard/seo-audit/tabs/crawled-pages-tab"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CrawlStatsBadge } from "@/components/dashboard/seo-audit/crawl-stats-badge"
+import { useAuditStore } from "@/store/audit-store"
 import {
   RefreshCw,
   Eye,
@@ -40,12 +41,16 @@ export const runtime = "edge";
 export default function SeoAuditPage() {
   const [activeTab, setActiveTab] = useState("overview")
   const { currentWebsite, isLoading } = useWebsite()
+  const { issues } = useAuditStore()
+
+  // Calculate the total issues count (sum of all pages affected)
+  const totalIssues = issues.items.reduce((total, issue) => total + issue.pagesAffected, 0)
 
   // Mock data - replace with actual data from your API
   const mockData = {
     siteHealth: {
       score: 80,
-      issues: 806,
+      issues: totalIssues || 0, // Use the calculated total from the audit store
       warnings: 2778,
       recommendations: 611,
     },

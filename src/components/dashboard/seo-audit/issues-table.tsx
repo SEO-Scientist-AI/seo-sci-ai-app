@@ -5,48 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AlertCircle, AlertTriangle, ExternalLink } from "lucide-react";
-
-interface Issue {
-  type: string;
-  count: number;
-  severity: 'error' | 'warning';
-  link: string;
-}
-
-const issues: Issue[] = [
-  {
-    type: "Incorrect pages found in sitemap.xml",
-    count: 64,
-    severity: "error",
-    link: "#"
-  },
-  {
-    type: "Invalid structured data items",
-    count: 153,
-    severity: "error",
-    link: "#"
-  },
-  {
-    type: "Missing meta description",
-    count: 104,
-    severity: "warning",
-    link: "#"
-  },
-  {
-    type: "Missing h1",
-    count: 116,
-    severity: "warning",
-    link: "#"
-  },
-  {
-    type: "Issues with mixed content",
-    count: 130,
-    severity: "error",
-    link: "#"
-  }
-];
+import { useAuditStore } from "@/store/audit-store";
 
 export function IssuesTable() {
+  const { issues } = useAuditStore();
+
   return (
     <Table>
       <TableHeader>
@@ -57,32 +20,32 @@ export function IssuesTable() {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {issues.map((issue) => (
-          <TableRow key={issue.type} className="hover:bg-muted/50">
+        {issues.items.map((issue) => (
+          <TableRow key={issue.id} className="hover:bg-muted/50">
             <TableCell className="flex items-center gap-2">
-              {issue.severity === 'error' ? (
+              {issue.severity === 'Error' ? (
                 <AlertCircle className="h-4 w-4 text-destructive" />
               ) : (
                 <AlertTriangle className="h-4 w-4 text-amber-500" />
               )}
-              {issue.type}
+              {issue.name}
               <Badge 
-                variant={issue.severity === 'error' ? 'destructive' : 'secondary'} 
+                variant={issue.severity === 'Error' ? 'destructive' : 'secondary'} 
                 className={cn(
                   "ml-2",
-                  issue.severity === 'error' 
+                  issue.severity === 'Error' 
                     ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
                     : "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
                 )}
               >
-                {issue.severity}s
+                {issue.severity}
               </Badge>
             </TableCell>
             <TableCell className="text-right font-medium">
               <span className={cn(
-                issue.severity === 'error' ? "text-destructive" : "text-amber-500"
+                issue.severity === 'Error' ? "text-destructive" : "text-amber-500"
               )}>
-                {issue.count}
+                {issue.pagesAffected}
               </span>
             </TableCell>
             <TableCell className="text-right">
