@@ -13,6 +13,11 @@ declare global {
   };
 }
 
+// For better debugging in Cloudflare
+function logDebug(message: string, data?: any) {
+  console.log(`[KeywordAPI] ${message}`, data ? JSON.stringify(data).substring(0, 200) + "..." : "");
+}
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://api.seoscientist.ai";
 const API_USER = process.env.NEXT_PUBLIC_API_USER;
 const API_PASSWORD = process.env.NEXT_PUBLIC_API_PASSWORD;
@@ -73,6 +78,9 @@ export async function getWebsiteKeywords(
   } = {}
 ) {
   try {
+    // Log environment info for debugging
+    logDebug(`API Info: BASE=${API_BASE}, USER=${API_USER ? "SET" : "NOT SET"}, PASS=${API_PASSWORD ? "SET" : "NOT SET"}`);
+    
     // Use the provided site or get from cookies
     const targetSite = site || cookies().get("currentWebsite")?.value;
     
@@ -80,16 +88,23 @@ export async function getWebsiteKeywords(
       return { error: "No website selected", keywords: [] };
     }
     
-    console.log(`Getting keywords for: ${targetSite}, forceRefresh: ${forceRefresh}`);
+    logDebug(`Getting keywords for: ${targetSite}, forceRefresh: ${forceRefresh}`);
     const { limit = 50, offset = 0, language_code = "en", location_code = 2840 } = options;
 
     // Create cache key for this specific request
     const cacheKey = `keywords-${targetSite}-${limit}-${offset}-${language_code}-${location_code}`;
+    
+    // Initialize global.keywordCache if it doesn't exist (Cloudflare may not persist globals)
+    if (typeof global.keywordCache === 'undefined') {
+      logDebug("Initializing global keyword cache");
+      global.keywordCache = {};
+    }
+    
     const cachedData = global.keywordCache?.[cacheKey];
 
     // Check for cached data (in memory cache)
     if (!forceRefresh && cachedData && (Date.now() - cachedData.timestamp) < 15 * 60 * 1000) {
-      console.log(`Using cached keywords for ${targetSite}`);
+      logDebug(`Using cached keywords for ${targetSite}`);
       return {
         total: cachedData.total,
         keywords: cachedData.keywords,
@@ -98,18 +113,24 @@ export async function getWebsiteKeywords(
     }
 
     // First try to get existing keywords
+    logDebug("Fetching existing keywords");
     const existingKeywords = await fetchExistingKeywords(targetSite, limit, offset);
-    console.log(`Fetch result: total=${existingKeywords.total}, statusCode=${existingKeywords.statusCode}`);
+    logDebug(`Fetch result: total=${existingKeywords.total}, statusCode=${existingKeywords.statusCode}`);
 
     // If we have keywords and don't need to refresh, return them
     if (existingKeywords.total > 0 && !forceRefresh) {
       // Store in memory cache
-      if (!global.keywordCache) global.keywordCache = {};
-      global.keywordCache[cacheKey] = {
-        total: existingKeywords.total,
-        keywords: mapApiKeywordsToUIFormat(existingKeywords.results),
-        timestamp: Date.now()
-      };
+      try {
+        if (!global.keywordCache) global.keywordCache = {};
+        global.keywordCache[cacheKey] = {
+          total: existingKeywords.total,
+          keywords: mapApiKeywordsToUIFormat(existingKeywords.results),
+          timestamp: Date.now()
+        };
+        logDebug("Updated keyword cache");
+      } catch (cacheError) {
+        logDebug("Failed to update cache", cacheError);
+      }
 
       return {
         total: existingKeywords.total,
@@ -119,25 +140,30 @@ export async function getWebsiteKeywords(
 
     // If no keywords exist (404) or force refresh is requested, upsert keywords
     if (existingKeywords.statusCode === 404 || existingKeywords.total === 0 || forceRefresh) {
-      console.log(`Upserting keywords for ${targetSite}`);
+      logDebug(`Upserting keywords for ${targetSite}`);
       const upsertResult = await upsertKeywords(targetSite, language_code, location_code, limit);
       
       if (upsertResult.error) {
-        console.error(`Upsert error: ${upsertResult.error}`);
+        logDebug(`Upsert error: ${upsertResult.error}`);
         return { error: upsertResult.error, keywords: [] };
       }
       
-      console.log(`Upsert successful, fetching fresh keywords for ${targetSite}`);
+      logDebug(`Upsert successful, fetching fresh keywords for ${targetSite}`);
       // After upserting, fetch the keywords again
       const freshKeywords = await fetchExistingKeywords(targetSite, limit, offset);
       
       // Store in memory cache
-      if (!global.keywordCache) global.keywordCache = {};
-      global.keywordCache[cacheKey] = {
-        total: freshKeywords.total,
-        keywords: mapApiKeywordsToUIFormat(freshKeywords.results),
-        timestamp: Date.now()
-      };
+      try {
+        if (!global.keywordCache) global.keywordCache = {};
+        global.keywordCache[cacheKey] = {
+          total: freshKeywords.total,
+          keywords: mapApiKeywordsToUIFormat(freshKeywords.results),
+          timestamp: Date.now()
+        };
+        logDebug("Updated keyword cache after upsert");
+      } catch (cacheError) {
+        logDebug("Failed to update cache after upsert", cacheError);
+      }
 
       return {
         total: freshKeywords.total,
@@ -146,10 +172,10 @@ export async function getWebsiteKeywords(
     }
 
     // If we get here, something unexpected happened
-    console.error(`Unexpected flow: statusCode=${existingKeywords.statusCode}, total=${existingKeywords.total}`);
+    logDebug(`Unexpected flow: statusCode=${existingKeywords.statusCode}, total=${existingKeywords.total}`);
     return { error: `Failed to get keywords (status ${existingKeywords.statusCode})`, keywords: [] };
   } catch (error) {
-    console.error("Error in getWebsiteKeywords:", error);
+    logDebug("Error in getWebsiteKeywords:", error);
     return { error: "Failed to fetch keywords: " + (error instanceof Error ? error.message : String(error)), keywords: [] };
   }
 }
@@ -166,7 +192,7 @@ async function fetchExistingKeywords(site: string, limit: number, offset: number
 
   // Check for API credentials
   if (!API_USER || !API_PASSWORD) {
-    console.error("API credentials not found in environment variables");
+    logDebug("API credentials not found in environment variables");
     return { total: 0, results: [], statusCode: 500 };
   }
 
@@ -176,9 +202,10 @@ async function fetchExistingKeywords(site: string, limit: number, offset: number
   ).toString('base64');
 
   try {
-    console.log(`Fetching keywords from: ${API_BASE}/keywords/site?${params.toString()}`);
+    const url = `${API_BASE}/keywords/site?${params.toString()}`;
+    logDebug(`Fetching keywords from: ${url}`);
     
-    const response = await fetch(`${API_BASE}/keywords/site?${params.toString()}`, {
+    const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -187,17 +214,20 @@ async function fetchExistingKeywords(site: string, limit: number, offset: number
       cache: "no-store",
     });
 
-    console.log(`GET keywords response status: ${response.status} ${response.statusText}`);
+    logDebug(`GET keywords response status: ${response.status} ${response.statusText}`);
 
     // Return status code for better flow control
     if (!response.ok) {
+      if (response.status === 403) {
+        logDebug("Authentication failed - check API credentials");
+      }
       return { total: 0, results: [], statusCode: response.status };
     }
 
     const data = await response.json();
     return { ...data as KeywordsResponse, statusCode: response.status };
   } catch (error) {
-    console.error("Error fetching keywords:", error);
+    logDebug("Error fetching keywords:", error);
     return { total: 0, results: [], statusCode: 500 };
   }
 }
@@ -214,7 +244,7 @@ async function upsertKeywords(
   try {
     // Check for API credentials
     if (!API_USER || !API_PASSWORD) {
-      console.error("API credentials not found in environment variables");
+      logDebug("API credentials not found in environment variables");
       return { error: "API credentials not configured" };
     }
     
@@ -223,9 +253,10 @@ async function upsertKeywords(
       `${API_USER}:${API_PASSWORD}`
     ).toString('base64');
 
-    console.log(`POSTing to upsert keywords at ${API_BASE}/keywords/site`);
+    const url = `${API_BASE}/keywords/site`;
+    logDebug(`POSTing to upsert keywords at ${url}`);
     
-    const response = await fetch(`${API_BASE}/keywords/site`, {
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -239,11 +270,11 @@ async function upsertKeywords(
       }),
     });
 
-    console.log(`POST keywords response status: ${response.status} ${response.statusText}`);
+    logDebug(`POST keywords response status: ${response.status} ${response.statusText}`);
 
     if (!response.ok) {
       const responseText = await response.text();
-      console.error(`Failed to upsert keywords: ${response.status} ${response.statusText}`, responseText);
+      logDebug(`Failed to upsert keywords: ${response.status}`, responseText);
       
       try {
         const errorData = JSON.parse(responseText) as { detail?: string };
@@ -254,10 +285,10 @@ async function upsertKeywords(
     }
 
     const data = await response.json();
-    console.log(`Upsert response:`, data);
+    logDebug(`Upsert response:`, data);
     return data as UpsertResponse;
   } catch (error) {
-    console.error("Error upserting keywords:", error);
+    logDebug("Error upserting keywords:", error);
     return { error: "Failed to upsert keywords: " + (error instanceof Error ? error.message : String(error)) };
   }
 }
