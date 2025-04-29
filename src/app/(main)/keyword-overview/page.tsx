@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CircularProgress } from "@/components/dashboard/circular-score"
 
+export const runtime = 'edge';
+
 export default function KeywordDashboard() {
   const [keywords, setKeywords] = useState("")
   const [domain, setDomain] = useState("")
