@@ -1,5 +1,7 @@
 "use client";
 
+export const runtime = "edge";
+
 import { useState, useEffect } from "react";
 import { useWebsite } from "@/hooks/use-website";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
