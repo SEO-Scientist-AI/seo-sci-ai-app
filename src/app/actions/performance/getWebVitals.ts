@@ -1,4 +1,4 @@
-'use server'
+"use client";
 
 import { auth } from "@/server/auth";
 
@@ -25,19 +25,19 @@ interface ApiWebVitalsResponse {
   fetch_time: string;
   overall_performance_score: number | null;
   lab_data: {
-    'largest-contentful-paint'?: { value: number };
-    'cumulative-layout-shift'?: { value: number };
-    'total-blocking-time'?: { value: number };
-    'first-contentful-paint'?: { value: number };
-    'speed-index'?: { value: number };
-    'interactive'?: { value: number };
+    "largest-contentful-paint"?: { value: number };
+    "cumulative-layout-shift"?: { value: number };
+    "total-blocking-time"?: { value: number };
+    "first-contentful-paint"?: { value: number };
+    "speed-index"?: { value: number };
+    interactive?: { value: number };
   };
   error: string | null;
 }
 
 // Helper function to ensure URL has a protocol
 function ensureUrlHasProtocol(url: string): string {
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
     return `https://${url}`;
   }
   return url;
@@ -56,9 +56,9 @@ function getMockWebVitals(url: string): WebVitalsResponse {
       tbt: { value: 300 },
       fcp: { value: 1800 },
       si: { value: 2200 },
-      tti: { value: 3500 }
+      tti: { value: 3500 },
     },
-    error: null
+    error: null,
   };
 }
 
@@ -66,19 +66,22 @@ function getMockWebVitals(url: string): WebVitalsResponse {
 function getBasicAuthHeader(): string {
   const username = process.env.NEXT_PUBLIC_API_USER;
   const password = process.env.NEXT_PUBLIC_API_PASSWORD;
-  
+
   if (!username || !password) {
-    throw new Error('API credentials are not configured');
+    throw new Error("API credentials are not configured");
   }
-  
-  const credentials = Buffer.from(`${username}:${password}`).toString('base64');
+
+  const credentials = Buffer.from(`${username}:${password}`).toString("base64");
   return `Basic ${credentials}`;
 }
 
-export async function getWebVitals(url: string, strategy: string = 'desktop'): Promise<WebVitalsResponse> {
+export async function getWebVitals(
+  url: string,
+  strategy: string = "desktop"
+): Promise<WebVitalsResponse> {
   try {
     const session = await auth();
-    
+
     if (!session?.user) {
       throw new Error("Unauthorized");
     }
@@ -94,18 +97,20 @@ export async function getWebVitals(url: string, strategy: string = 'desktop'): P
     // Use environment variable for API URL
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (!apiUrl) {
-      throw new Error('API URL is not configured');
+      throw new Error("API URL is not configured");
     }
-    
+
     // Build the full request URL
-    const requestUrl = `${apiUrl}/performance/web-vitals?url=${encodeURIComponent(fullUrl)}&strategy=${strategy}`;
-    
+    const requestUrl = `${apiUrl}/performance/web-vitals?url=${encodeURIComponent(
+      fullUrl
+    )}&strategy=${strategy}`;
+
     try {
       const response = await fetch(requestUrl, {
         headers: {
-          'Authorization': getBasicAuthHeader(),
-          'Content-Type': 'application/json'
-        }
+          Authorization: getBasicAuthHeader(),
+          "Content-Type": "application/json",
+        },
       });
 
       if (!response.ok) {
@@ -113,8 +118,8 @@ export async function getWebVitals(url: string, strategy: string = 'desktop'): P
       }
 
       // Parse the API response and map to our interface
-      const apiResponse = await response.json() as ApiWebVitalsResponse;
-      
+      const apiResponse = (await response.json()) as ApiWebVitalsResponse;
+
       // Map response to our WebVitalsResponse format
       const webVitals: WebVitalsResponse = {
         requested_url: apiResponse.requested_url,
@@ -122,14 +127,25 @@ export async function getWebVitals(url: string, strategy: string = 'desktop'): P
         fetch_time: apiResponse.fetch_time,
         overall_performance_score: apiResponse.overall_performance_score,
         lab_data: {
-          lcp: { value: apiResponse.lab_data?.['largest-contentful-paint']?.value || null },
-          cls: { value: apiResponse.lab_data?.['cumulative-layout-shift']?.value || null },
-          tbt: { value: apiResponse.lab_data?.['total-blocking-time']?.value || null },
-          fcp: { value: apiResponse.lab_data?.['first-contentful-paint']?.value || null },
-          si: { value: apiResponse.lab_data?.['speed-index']?.value || null },
-          tti: { value: apiResponse.lab_data?.['interactive']?.value || null }
+          lcp: {
+            value:
+              apiResponse.lab_data?.["largest-contentful-paint"]?.value || null,
+          },
+          cls: {
+            value:
+              apiResponse.lab_data?.["cumulative-layout-shift"]?.value || null,
+          },
+          tbt: {
+            value: apiResponse.lab_data?.["total-blocking-time"]?.value || null,
+          },
+          fcp: {
+            value:
+              apiResponse.lab_data?.["first-contentful-paint"]?.value || null,
+          },
+          si: { value: apiResponse.lab_data?.["speed-index"]?.value || null },
+          tti: { value: apiResponse.lab_data?.["interactive"]?.value || null },
         },
-        error: apiResponse.error
+        error: apiResponse.error,
       };
 
       return webVitals;
@@ -137,9 +153,8 @@ export async function getWebVitals(url: string, strategy: string = 'desktop'): P
       console.error("Fetch error:", fetchError);
       return getMockWebVitals(fullUrl);
     }
-    
   } catch (error) {
     console.error("Error in getWebVitals:", error);
     return getMockWebVitals(url);
   }
-} 
+}

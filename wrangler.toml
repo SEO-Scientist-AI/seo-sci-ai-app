@@ -11,3 +11,8 @@ binding = "DATABASE"
 database_name = "seo-sci-ai-dev-db"
 database_id = "d3d93d42-23b8-4adb-8753-13577e8034fc"
 migrations_dir = "./drizzle"
+
+# Queue bindings
+[[queues.producers]]
+binding = "QUEUE_BINDING"
+queue = "site-audit"

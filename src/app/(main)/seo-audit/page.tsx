@@ -1,23 +1,28 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useWebsite } from "@/hooks/use-website"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { OverviewTab } from "@/components/dashboard/seo-audit/tabs/overview-tab"
-import { IssuesTab } from "@/components/dashboard/seo-audit/tabs/issues-tab"
-import { KeywordsTab } from "@/components/dashboard/seo-audit/tabs/keywords-tab"
-import { ContentTab } from "@/components/dashboard/seo-audit/tabs/content-tab"
-import { PerformanceTab } from "@/components/dashboard/seo-audit/tabs/performance-tab"
-import { RecommendationsTab } from "@/components/dashboard/seo-audit/tabs/recommendations-tab"
-import { CrawledPagesTab } from "@/components/dashboard/seo-audit/tabs/crawled-pages-tab"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CrawlStatsBadge } from "@/components/dashboard/seo-audit/crawl-stats-badge"
-import { useAuditStore } from "@/store/audit-store"
+import { useState, useEffect } from "react";
+import { useWebsite } from "@/hooks/use-website";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { OverviewTab } from "@/components/dashboard/seo-audit/tabs/overview-tab";
+import { IssuesTab } from "@/components/dashboard/seo-audit/tabs/issues-tab";
+import { KeywordsTab } from "@/components/dashboard/seo-audit/tabs/keywords-tab";
+import { ContentTab } from "@/components/dashboard/seo-audit/tabs/content-tab";
+import { PerformanceTab } from "@/components/dashboard/seo-audit/tabs/performance-tab";
+import { RecommendationsTab } from "@/components/dashboard/seo-audit/tabs/recommendations-tab";
+import { CrawledPagesTab } from "@/components/dashboard/seo-audit/tabs/crawled-pages-tab";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CrawlStatsBadge } from "@/components/dashboard/seo-audit/crawl-stats-badge";
+import { useAuditStore } from "@/store/audit-store";
 import {
   RefreshCw,
   Eye,
@@ -32,19 +37,20 @@ import {
   Clock,
   MoreHorizontal,
   AlertCircle,
-  Loader2
-} from "lucide-react"
-import { ProgressTab } from "@/components/dashboard/seo-audit/tabs/progress-tab"
-
-export const runtime = "edge";
+  Loader2,
+} from "lucide-react";
+import { ProgressTab } from "@/components/dashboard/seo-audit/tabs/progress-tab";
 
 export default function SeoAuditPage() {
-  const [activeTab, setActiveTab] = useState("overview")
-  const { currentWebsite, isLoading } = useWebsite()
-  const { issues } = useAuditStore()
+  const [activeTab, setActiveTab] = useState("overview");
+  const { currentWebsite, isLoading } = useWebsite();
+  const { issues } = useAuditStore();
 
   // Calculate the total issues count (sum of all pages affected)
-  const totalIssues = issues.items.reduce((total, issue) => total + issue.pagesAffected, 0)
+  const totalIssues = issues.items.reduce(
+    (total, issue) => total + issue.pagesAffected,
+    0
+  );
 
   // Mock data - replace with actual data from your API
   const mockData = {
@@ -68,17 +74,19 @@ export default function SeoAuditPage() {
       redirects: 1,
       blocked: 0,
     },
-  }
+  };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
-          <p className="text-sm text-muted-foreground">Loading website data...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading website data...
+          </p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!currentWebsite) {
@@ -91,7 +99,7 @@ export default function SeoAuditPage() {
           </AlertDescription>
         </Alert>
       </div>
-    )
+    );
   }
 
   return (
@@ -103,13 +111,20 @@ export default function SeoAuditPage() {
             <div className="py-4 px-4 md:px-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-semibold text-foreground">Site Audit</h1>
+                  <h1 className="text-xl font-semibold text-foreground">
+                    Site Audit
+                  </h1>
                   <Separator orientation="vertical" className="h-6" />
                   <div className="flex items-center">
                     <Globe className="h-4 w-4 text-primary mr-1.5" />
-                    <span className="font-medium text-primary">{currentWebsite}</span>
+                    <span className="font-medium text-primary">
+                      {currentWebsite}
+                    </span>
                   </div>
-                  <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-primary/20">
+                  <Badge
+                    variant="outline"
+                    className="ml-2 bg-primary/10 text-primary border-primary/20"
+                  >
                     Active
                   </Badge>
                 </div>
@@ -127,14 +142,22 @@ export default function SeoAuditPage() {
               </div>
 
               <div className="flex items-center gap-2 self-end md:self-auto">
-                <Button variant="default" size="sm" className="gap-1.5 h-9 px-3">
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-1.5 h-9 px-3"
+                >
                   <RefreshCw className="h-3.5 w-3.5" />
                   <span>Rerun Audit</span>
                 </Button>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-1.5 h-9 px-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 h-9 px-3"
+                    >
                       <Download className="h-3.5 w-3.5" />
                       <span>Export</span>
                       <ChevronDown className="h-3.5 w-3.5 ml-1" />
@@ -156,7 +179,11 @@ export default function SeoAuditPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <Button variant="outline" size="sm" className="gap-1.5 h-9 px-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-9 px-3"
+                >
                   <Share2 className="h-3.5 w-3.5" />
                   <span>Share</span>
                 </Button>
@@ -165,7 +192,11 @@ export default function SeoAuditPage() {
                   <Settings className="h-4 w-4" />
                 </Button>
 
-                <Button variant="ghost" size="icon" className="h-9 w-9 md:hidden">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 md:hidden"
+                >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </div>
@@ -208,14 +239,16 @@ export default function SeoAuditPage() {
                   </Badge>
 
                   <CrawlStatsBadge />
-
                 </div>
 
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-green-500"></div>
                     <span className="text-sm text-muted-foreground">
-                      Health Score: <strong className="text-foreground">{mockData.siteHealth.score}%</strong>
+                      Health Score:{" "}
+                      <strong className="text-foreground">
+                        {mockData.siteHealth.score}%
+                      </strong>
                     </span>
                   </div>
 
@@ -224,7 +257,10 @@ export default function SeoAuditPage() {
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-amber-500"></div>
                     <span className="text-sm text-muted-foreground">
-                      Issues: <strong className="text-foreground">{mockData.siteHealth.issues}</strong>
+                      Issues:{" "}
+                      <strong className="text-foreground">
+                        {mockData.siteHealth.issues}
+                      </strong>
                     </span>
                   </div>
                 </div>
@@ -235,7 +271,11 @@ export default function SeoAuditPage() {
       </header>
 
       <div className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="overview" onValueChange={setActiveTab} className="w-full">
+        <Tabs
+          defaultValue="overview"
+          onValueChange={setActiveTab}
+          className="w-full"
+        >
           <TabsList className="mb-6 w-full grid grid-cols-10 gap-4 overflow-x-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="issues">Issues</TabsTrigger>
@@ -250,11 +290,7 @@ export default function SeoAuditPage() {
           </TabsList>
 
           <TabsContent value="overview" className="mt-0">
-            <OverviewTab
-              siteHealth={mockData.siteHealth}
-              metrics={mockData.metrics}
-              crawledPages={mockData.crawledPages}
-            />
+            <OverviewTab />
           </TabsContent>
 
           <TabsContent value="issues" className="mt-0">
@@ -287,7 +323,9 @@ export default function SeoAuditPage() {
                 <CardTitle>Compare Crawls</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">Compare crawls content will be displayed here.</p>
+                <p className="text-muted-foreground">
+                  Compare crawls content will be displayed here.
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -302,12 +340,14 @@ export default function SeoAuditPage() {
                 <CardTitle>JS Impact</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">JS impact content will be displayed here.</p>
+                <p className="text-muted-foreground">
+                  JS impact content will be displayed here.
+                </p>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
     </div>
-  )
+  );
 }

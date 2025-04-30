@@ -71,3 +71,5 @@ Thumbs.db
 
 seo-sci-ai-app.rar
 /seo-sci-ai-agents
+
+*.code-workspace
