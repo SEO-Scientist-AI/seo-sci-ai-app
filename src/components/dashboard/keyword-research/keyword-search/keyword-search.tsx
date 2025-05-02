@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CircularProgress } from "@/components/dashboard/circular-score"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export const runtime = 'edge';
 
@@ -27,6 +28,43 @@ export default function KeywordSearch() {
   // Chart refs
   const volumeChartRef = useRef<HTMLDivElement>(null)
   const volumeChartInstance = useRef<echarts.ECharts | null>(null)
+
+  // Country data
+  const countries = [
+    { code: "US", name: "United States" },
+    { code: "GB", name: "United Kingdom" },
+    { code: "CA", name: "Canada" },
+    { code: "AU", name: "Australia" },
+    { code: "IN", name: "India" },
+    { code: "DE", name: "Germany" },
+    { code: "FR", name: "France" },
+    { code: "JP", name: "Japan" },
+    { code: "BR", name: "Brazil" },
+    { code: "MX", name: "Mexico" },
+    { code: "ES", name: "Spain" },
+    { code: "IT", name: "Italy" },
+    { code: "NL", name: "Netherlands" },
+    { code: "RU", name: "Russia" },
+    { code: "CN", name: "China" },
+    { code: "KR", name: "South Korea" },
+    { code: "ZA", name: "South Africa" },
+    { code: "SG", name: "Singapore" },
+    { code: "SE", name: "Sweden" },
+    { code: "NO", name: "Norway" },
+    { code: "DK", name: "Denmark" },
+    { code: "FI", name: "Finland" },
+    { code: "PT", name: "Portugal" },
+    { code: "IE", name: "Ireland" },
+    { code: "CH", name: "Switzerland" },
+    { code: "AT", name: "Austria" },
+    { code: "BE", name: "Belgium" },
+    { code: "NZ", name: "New Zealand" }
+  ];
+
+  // Function to get flag URL for country code
+  const getFlagUrl = (code: string): string => {
+    return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
+  };
 
   // Initialize charts after component mounts
   useEffect(() => {
@@ -98,8 +136,9 @@ export default function KeywordSearch() {
       router.push(`/keyword-overview?keyword=${encodeURIComponent(firstKeyword)}&country=${country}${domain ? `&domain=${encodeURIComponent(domain)}` : ''}`)
       
       // Show toast notification
+      const countryName = countries.find(c => c.code === country)?.name || country;
       toast.success("Searching for keyword data", {
-        description: `Analyzing "${firstKeyword}" in ${country === "US" ? "United States" : country === "UK" ? "United Kingdom" : country === "CA" ? "Canada" : "Australia"}`
+        description: `Analyzing "${firstKeyword}" in ${countryName}`
       })
     } catch (error) {
       console.error("Error searching for keyword:", error)
@@ -108,6 +147,11 @@ export default function KeywordSearch() {
       setIsSubmitting(false)
     }
   }
+
+  // Get country name from code
+  const getCountryName = (code: string): string => {
+    return countries.find(c => c.code === code)?.name || code;
+  };
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col">
@@ -175,12 +219,43 @@ export default function KeywordSearch() {
                   </div>
                 </div>
                 <div className="mb-4">
-                  <Input
-                    placeholder="Enter keywords separated by commas"
-                    value={keywords}
-                    onChange={(e) => setKeywords(e.target.value)}
-                    className="h-12 w-full text-base transition-all duration-200 focus-visible:ring-primary"
-                  />
+                  <div className="relative">
+                    <Input
+                      placeholder="Enter keywords separated by commas"
+                      value={keywords}
+                      onChange={(e) => setKeywords(e.target.value)}
+                      className={`h-12 w-full text-base transition-all duration-200 focus-visible:ring-primary pr-10 ${
+                        isSubmitting ? "bg-muted/40 border-primary/40 animate-pulse" : ""
+                      }`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSearch(e as unknown as FormEvent);
+                        }
+                      }}
+                      disabled={isSubmitting}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-12 w-12 text-muted-foreground hover:text-foreground"
+                      onClick={(e) => handleSearch(e as unknown as FormEvent)}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                      ) : (
+                        <Search className="h-5 w-5" />
+                      )}
+                    </Button>
+                  </div>
+                  {isSubmitting && (
+                    <div className="mt-2 text-sm text-primary font-medium flex items-center">
+                      <div className="mr-2 h-2 w-2 rounded-full bg-primary animate-ping" />
+                      Searching for keyword data...
+                    </div>
+                  )}
                 </div>
                 <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="relative">
@@ -202,68 +277,39 @@ export default function KeywordSearch() {
                   <Select defaultValue={country} onValueChange={setCountry}>
                     <SelectTrigger className="h-12 transition-all duration-200 hover:border-primary">
                       <SelectValue placeholder="Select country">
-                        <div className="flex items-center">
-                          <span className="mr-2">
-                            {country === "US" ? "🇺🇸" : country === "UK" ? "🇬🇧" : country === "CA" ? "🇨🇦" : "🇦🇺"}
-                          </span>
-                          <span>
-                            {country === "US"
-                              ? "United States"
-                              : country === "UK"
-                                ? "United Kingdom"
-                                : country === "CA"
-                                  ? "Canada"
-                                  : "Australia"}
-                          </span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-3.5 relative overflow-hidden rounded-sm">
+                            <img 
+                              src={getFlagUrl(country)} 
+                              alt={`${getCountryName(country)} flag`}
+                              className="object-cover w-full h-full"
+                              style={{ maxWidth: "100%" }}
+                            />
+                          </div>
+                          <span>{getCountryName(country)}</span>
                         </div>
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="US">
-                        <div className="flex items-center">
-                          <span className="mr-2">🇺🇸</span>
-                          <span>United States</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="UK">
-                        <div className="flex items-center">
-                          <span className="mr-2">🇬🇧</span>
-                          <span>United Kingdom</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="CA">
-                        <div className="flex items-center">
-                          <span className="mr-2">🇨🇦</span>
-                          <span>Canada</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="AU">
-                        <div className="flex items-center">
-                          <span className="mr-2">🇦🇺</span>
-                          <span>Australia</span>
-                        </div>
-                      </SelectItem>
+                      <ScrollArea className="h-[300px]">
+                        {countries.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-5 h-3.5 relative overflow-hidden rounded-sm">
+                                <img 
+                                  src={getFlagUrl(c.code)} 
+                                  alt={`${c.name} flag`}
+                                  className="object-cover w-full h-full"
+                                  style={{ maxWidth: "100%" }}
+                                />
+                              </div>
+                              <span>{c.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </ScrollArea>
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="flex justify-center">
-                  <Button 
-                    type="submit" 
-                    className="h-10 px-4 bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 ease-in-out"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin mr-2 h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                        Searching...
-                      </>
-                    ) : (
-                      <>
-                        <Search className="mr-2 h-4 w-4" />
-                        Search
-                      </>
-                    )}
-                  </Button>
                 </div>
               </form>
             </CardContent>
@@ -288,9 +334,16 @@ export default function KeywordSearch() {
                 <div className="mb-6 flex items-center justify-between">
                   <div>
                     <div className="text-sm text-muted-foreground">Volume</div>
-                    <div className="flex items-center">
+                    <div className="flex items-center gap-2">
                       <span className="text-3xl font-bold text-foreground">124.0M</span>
-                      <span className="ml-2">🇺🇸</span>
+                      <div className="w-5 h-3.5 relative overflow-hidden rounded-sm">
+                        <img 
+                          src={getFlagUrl("US")} 
+                          alt="United States flag"
+                          className="object-cover w-full h-full"
+                          style={{ maxWidth: "100%" }}
+                        />
+                      </div>
                     </div>
                   </div>
                   <div>

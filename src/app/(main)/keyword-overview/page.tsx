@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { KeywordOverviewHeader } from "@/components/dashboard/keyword-research/keyword-overview/keyword-overview-header";
@@ -9,6 +9,7 @@ import { KeywordOverviewContent } from "@/components/dashboard/keyword-research/
 export const runtime = 'edge';
 
 export default function KeywordOverviewPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const keywordParam = searchParams.get('keyword');
   const countryParam = searchParams.get('country') || 'US';
@@ -34,6 +35,21 @@ export default function KeywordOverviewPage() {
     setDate(new Date());
     setCurrency("USD");
   }, [countryParam]);
+
+  // Set loading state when keyword changes
+  useEffect(() => {
+    if (keywordParam) {
+      setIsLoading(true);
+    }
+  }, [keywordParam]);
+
+  // Handler for new keyword search
+  const handleSearch = (searchKeyword: string) => {
+    if (searchKeyword.trim()) {
+      setIsLoading(true);
+      router.push(`/keyword-overview?keyword=${encodeURIComponent(searchKeyword.trim())}&country=${country}${domainParam ? `&domain=${domainParam}` : ''}`);
+    }
+  };
 
   // Currencies for display
   const currencies = [
@@ -112,6 +128,7 @@ export default function KeywordOverviewPage() {
             onDeviceChange={setDevice}
             onDateChange={handleDateChange}
             onCurrencyChange={setCurrency}
+            onSearch={handleSearch}
           />
           
           <KeywordOverviewContent 
@@ -121,6 +138,7 @@ export default function KeywordOverviewPage() {
             country={country}
             onMetadataUpdate={updateKeywordMetadata}
             onLoadingChange={handleLoadingChange}
+            isLoading={isLoading}
           />
         </>
       ) : (

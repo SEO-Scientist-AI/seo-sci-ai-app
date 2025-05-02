@@ -77,6 +77,7 @@ interface KeywordOverviewContentProps {
   country: string
   onMetadataUpdate?: (difficultyScore: number, keywordCount: number) => void
   onLoadingChange?: (isLoading: boolean) => void
+  isLoading?: boolean
 }
 
 // Constants
@@ -90,6 +91,29 @@ const COUNTRY_TO_LOCATION: Record<string, string> = {
   CA: "Canada",
   AU: "Australia",
   IN: "India",
+  DE: "Germany",
+  FR: "France",
+  JP: "Japan",
+  BR: "Brazil",
+  MX: "Mexico",
+  ES: "Spain",
+  IT: "Italy",
+  NL: "Netherlands",
+  RU: "Russia",
+  CN: "China",
+  KR: "South Korea",
+  ZA: "South Africa",
+  SG: "Singapore",
+  SE: "Sweden",
+  NO: "Norway",
+  DK: "Denmark",
+  FI: "Finland",
+  PT: "Portugal",
+  IE: "Ireland",
+  CH: "Switzerland",
+  AT: "Austria",
+  BE: "Belgium",
+  NZ: "New Zealand"
 }
 
 export function KeywordOverviewContent({
@@ -99,11 +123,15 @@ export function KeywordOverviewContent({
   country = "US",
   onMetadataUpdate,
   onLoadingChange,
+  isLoading: externalLoading,
 }: KeywordOverviewContentProps) {
   const [keywordData, setKeywordData] = useState<KeywordData | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const [showGlobalVolume, setShowGlobalVolume] = useState<boolean>(false)
+
+  // Use external loading state if provided
+  const isLoadingState = externalLoading !== undefined ? externalLoading : isLoading
 
   // Function to get base64 credentials
   const getCredentials = () => {
@@ -358,23 +386,37 @@ export function KeywordOverviewContent({
             <div className="bg-card rounded-lg border shadow-sm p-6">
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Monthly Search Volume</h3>
               <div className="flex items-end justify-between">
-                <div className="text-2xl font-bold">{keywordData.volume.value.toLocaleString()}</div>
+                <div className="text-2xl font-bold">
+                  {isLoadingState ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-pulse h-7 w-20 bg-muted rounded"></div>
+                    </div>
+                  ) : (
+                    keywordData.volume.value.toLocaleString()
+                  )}
+                </div>
                 <div className="flex items-center text-sm text-muted-foreground">
-                  <span
-                    className={
-                      keywordData.volume.trend[11] > keywordData.volume.trend[0] ? "text-green-500" : "text-red-500"
-                    }
-                  >
-                    {keywordData.volume.trend[11] > keywordData.volume.trend[0] ? "↑" : "↓"}
-                    {Math.abs(
-                      Math.round(
-                        ((keywordData.volume.trend[11] - keywordData.volume.trend[0]) / keywordData.volume.trend[0]) *
-                          100,
-                      ),
-                    )}
-                    %
-                  </span>
-                  <span className="ml-1">vs last year</span>
+                  {isLoadingState ? (
+                    <div className="animate-pulse h-4 w-16 bg-muted rounded"></div>
+                  ) : (
+                    <>
+                      <span
+                        className={
+                          keywordData.volume.trend[11] > keywordData.volume.trend[0] ? "text-green-500" : "text-red-500"
+                        }
+                      >
+                        {keywordData.volume.trend[11] > keywordData.volume.trend[0] ? "↑" : "↓"}
+                        {Math.abs(
+                          Math.round(
+                            ((keywordData.volume.trend[11] - keywordData.volume.trend[0]) / keywordData.volume.trend[0]) *
+                              100,
+                          ),
+                        )}
+                        %
+                      </span>
+                      <span className="ml-1">vs last year</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -433,115 +475,141 @@ export function KeywordOverviewContent({
                     <div className="flex justify-between items-center">
                       <span className="mb-4">Monthly Search Volume</span>
                       <span className="text-sm font-normal ">
-                        <Badge
-                          className={
-                            keywordData.volume.trend[keywordData.volume.trend.length - 1] > keywordData.volume.trend[0]
-                              ? "bg-green-100 text-green-800 hover:bg-green-100"
-                              : "bg-red-100 text-red-800 hover:bg-red-100"
-                          }
-                        >
-                          {keywordData.volume.trend[keywordData.volume.trend.length - 1] >
-                          keywordData.volume.trend[0] ? (
-                            <span className="flex items-center">
-                              <TrendingUp className="h-3 w-3 mr-1" />
-                              {Math.abs(
-                                Math.round(
-                                  ((keywordData.volume.trend[keywordData.volume.trend.length - 1] -
-                                    keywordData.volume.trend[0]) /
-                                    (keywordData.volume.trend[0] || 1)) *
-                                    100,
-                                ),
-                              )}
-                              %
-                            </span>
-                          ) : (
-                            <span className="flex items-center">
-                              <TrendingDown className="h-3 w-3 mr-1" />
-                              {Math.abs(
-                                Math.round(
-                                  ((keywordData.volume.trend[0] -
-                                    keywordData.volume.trend[keywordData.volume.trend.length - 1]) /
-                                    (keywordData.volume.trend[0] || 1)) *
-                                    100,
-                                ),
-                              )}
-                              %
-                            </span>
-                          )}
-                        </Badge>
+                        {isLoadingState ? (
+                          <div className="flex items-center gap-2">
+                            <div className="animate-pulse h-6 w-16 bg-muted rounded"></div>
+                          </div>
+                        ) : (
+                          <Badge
+                            className={
+                              keywordData.volume.trend[keywordData.volume.trend.length - 1] > keywordData.volume.trend[0]
+                                ? "bg-green-100 text-green-800 hover:bg-green-100"
+                                : "bg-red-100 text-red-800 hover:bg-red-100"
+                            }
+                          >
+                            {keywordData.volume.trend[keywordData.volume.trend.length - 1] >
+                            keywordData.volume.trend[0] ? (
+                              <span className="flex items-center">
+                                <TrendingUp className="h-3 w-3 mr-1" />
+                                {Math.abs(
+                                  Math.round(
+                                    ((keywordData.volume.trend[keywordData.volume.trend.length - 1] -
+                                      keywordData.volume.trend[0]) /
+                                      (keywordData.volume.trend[0] || 1)) *
+                                      100,
+                                  ),
+                                )}
+                                %
+                              </span>
+                            ) : (
+                              <span className="flex items-center">
+                                <TrendingDown className="h-3 w-3 mr-1" />
+                                {Math.abs(
+                                  Math.round(
+                                    ((keywordData.volume.trend[0] -
+                                      keywordData.volume.trend[keywordData.volume.trend.length - 1]) /
+                                      (keywordData.volume.trend[0] || 1)) *
+                                      100,
+                                  ),
+                                )}
+                                %
+                              </span>
+                            )}
+                          </Badge>
+                        )}
                       </span>
                     </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[320px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={keywordData.volume.trend.map((volume, index) => {
-                          const monthNames = [
-                            "Jan",
-                            "Feb",
-                            "Mar",
-                            "Apr",
-                            "May",
-                            "Jun",
-                            "Jul",
-                            "Aug",
-                            "Sep",
-                            "Oct",
-                            "Nov",
-                            "Dec",
-                          ]
-                          return {
-                            month: monthNames[index % 12],
-                            volume: volume,
-                          }
-                        })}
-                        margin={{
-                          top: 10,
-                          right: 10,
-                          left: 10,
-                          bottom: 20,
-                        }}
-                      >
-                        <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.4} />
-                        <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-                        <YAxis tickLine={false} axisLine={false} tickMargin={8} domain={[0, "dataMax + 20%"]} />
-                        <ChartTooltip
-                          cursor={false}
-                          content={(props: TooltipProps<ValueType, NameType>) => {
-                            if (props.active && props.payload && props.payload.length) {
-                              const payload = props.payload[0]
-                              return (
-                                <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div className="flex flex-col">
-                                      <span className="text-xs uppercase text-muted-foreground">Month</span>
-                                      <span className="font-bold">{payload.payload.month}</span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                      <span className="text-xs uppercase text-muted-foreground">Search Volume</span>
-                                      <span className="font-bold">{payload.payload.volume.toLocaleString()}</span>
+                    {isLoadingState ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="space-y-4 w-full">
+                          <div className="flex items-center justify-between">
+                            <div className="animate-pulse h-4 w-16 bg-muted rounded"></div>
+                            <div className="animate-pulse h-4 w-16 bg-muted rounded"></div>
+                          </div>
+                          <div className="animate-pulse h-[280px] w-full bg-muted/50 rounded"></div>
+                          <div className="flex items-center justify-between">
+                            <div className="animate-pulse h-4 w-8 bg-muted rounded"></div>
+                            <div className="animate-pulse h-4 w-8 bg-muted rounded"></div>
+                            <div className="animate-pulse h-4 w-8 bg-muted rounded"></div>
+                            <div className="animate-pulse h-4 w-8 bg-muted rounded"></div>
+                            <div className="animate-pulse h-4 w-8 bg-muted rounded"></div>
+                            <div className="animate-pulse h-4 w-8 bg-muted rounded"></div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={keywordData.volume.trend.map((volume, index) => {
+                            const monthNames = [
+                              "Jan",
+                              "Feb",
+                              "Mar",
+                              "Apr",
+                              "May",
+                              "Jun",
+                              "Jul",
+                              "Aug",
+                              "Sep",
+                              "Oct",
+                              "Nov",
+                              "Dec",
+                            ]
+                            return {
+                              month: monthNames[index % 12],
+                              volume: volume,
+                            }
+                          })}
+                          margin={{
+                            top: 10,
+                            right: 10,
+                            left: 10,
+                            bottom: 20,
+                          }}
+                        >
+                          <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.4} />
+                          <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                          <YAxis tickLine={false} axisLine={false} tickMargin={8} domain={[0, "dataMax + 20%"]} />
+                          <ChartTooltip
+                            cursor={false}
+                            content={(props: TooltipProps<ValueType, NameType>) => {
+                              if (props.active && props.payload && props.payload.length) {
+                                const payload = props.payload[0]
+                                return (
+                                  <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="flex flex-col">
+                                        <span className="text-xs uppercase text-muted-foreground">Month</span>
+                                        <span className="font-bold">{payload.payload.month}</span>
+                                      </div>
+                                      <div className="flex flex-col">
+                                        <span className="text-xs uppercase text-muted-foreground">Search Volume</span>
+                                        <span className="font-bold">{payload.payload.volume.toLocaleString()}</span>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              )
-                            }
-                            return null
-                          }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="volume"
-                          stroke="hsl(var(--primary))"
-                          strokeWidth={2}
-                          activeDot={{
-                            r: 6,
-                            style: { fill: "hsl(var(--primary))", opacity: 0.8 },
-                          }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                                )
+                              }
+                              return null
+                            }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="volume"
+                            stroke="hsl(var(--primary))"
+                            strokeWidth={2}
+                            activeDot={{
+                              r: 6,
+                              style: { fill: "hsl(var(--primary))", opacity: 0.8 },
+                            }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -592,7 +660,7 @@ export function KeywordOverviewContent({
       )}
 
       {/* Loading State */}
-      {isLoading && (
+      {isLoadingState && !keywordData && (
         <div className="py-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {Array.from({ length: 4 }).map((_, i) => (
