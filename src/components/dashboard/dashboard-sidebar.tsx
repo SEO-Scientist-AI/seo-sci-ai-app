@@ -88,7 +88,7 @@ export function DashboardSidebar({ currentWebsite }: SidebarProps) {
     {
       icon: Search,
       label: "Keyword Research",
-      href: "/keyword-overview",
+      href: "/keyword-search",
     },
     {
       icon: Globe,
@@ -168,7 +168,7 @@ export function DashboardSidebar({ currentWebsite }: SidebarProps) {
                     "font-medium whitespace-nowrap absolute left-12",
                     "transition-all duration-300",
                     isExpanded
-                      ? "opacity-100 translate-x-0 delay-[50ms]"
+                      ? "opacity-100 translate-x-0 delay-100"
                       : "opacity-0 -translate-x-4 pointer-events-none",
                   )}
                 >
