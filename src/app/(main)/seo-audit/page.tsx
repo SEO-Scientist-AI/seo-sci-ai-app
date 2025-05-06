@@ -285,7 +285,6 @@ export default function SeoAuditPage() {
             <TabsTrigger value="statistics">Statistics</TabsTrigger>
             <TabsTrigger value="compare-crawls">Compare Crawls</TabsTrigger>
             <TabsTrigger value="progress">Progress</TabsTrigger>
-            <TabsTrigger value="js-impact">JS Impact</TabsTrigger>
             <TabsTrigger value="keywords">Keywords</TabsTrigger>
             <TabsTrigger value="on-page">On-Page</TabsTrigger>
             <TabsTrigger value="technical">Technical</TabsTrigger>
@@ -334,19 +333,6 @@ export default function SeoAuditPage() {
 
           <TabsContent value="progress" className="mt-0">
             <ProgressTab />
-          </TabsContent>
-
-          <TabsContent value="js-impact" className="mt-0">
-            <Card>
-              <CardHeader>
-                <CardTitle>JS Impact</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  JS impact content will be displayed here.
-                </p>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>
