@@ -20,18 +20,24 @@ Supermemory now has 20k+ users and it runs on $5/month. safe to say, it's _very_
 
 ## Getting Started
 
-1. Make sure that you have [Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/#installupdate-wrangler) installed. And also that you have logged in with `wrangler login` (You'll need a Cloudflare account)
 
-2. Clone the repository and install dependencies:
+1. Clone the repository and install dependencies:
    ```bash
-   git clone https://github.com/Dhravya/cloudflare-saas-stack
-   cd cloudflare-saas-stack
+   git clone https://github.com/SEO-Scientist-AI/seo-sci-ai-app.git
+   cd seo-sci-ai-app
    npm i -g bun
    bun install
    bun run setup
    ```
 
-3. Run the development server:
+2. Create and configure `.env` file
+
+3. Run this command to migrate db:
+ ```bash
+   bun run db:migrate-local -- ./drizzle/0000_early_brother_voodoo.sql
+   ```
+
+2. Run the development server:
    ```bash
    bun run dev
    ```
